@@ -1,0 +1,8 @@
+transformers
+torch
+torchvision
+firebase-admin
+fastapi
+uvicorn
+scikit-learn
+Pillow
