@@ -12,10 +12,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
 import 'profilepage.dart';
-import 'messege.dart';
 
-const Color primaryColor = Colors.blueAccent;
-const Color secondaryColor = Color.fromARGB(255, 125, 134, 255);
+const Color primaryColor = Color(0xFF6C3DE8);
+const Color secondaryColor = Color(0xFFF5F5F7);
 const Color accentColor = Colors.white;
 
 class UserCache {
@@ -69,10 +68,19 @@ class _CommunityPageState extends State<CommunityPage> {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: secondaryColor,
+          backgroundColor: const Color(0xFFF5F5F7),
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            backgroundColor: primaryColor,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+            ),
+            backgroundColor: Colors.transparent,
             elevation: 0,
             leading: FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
@@ -111,6 +119,7 @@ class _CommunityPageState extends State<CommunityPage> {
             ),
             title: Container(
               height: 40,
+              margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
@@ -131,41 +140,48 @@ class _CommunityPageState extends State<CommunityPage> {
                 decoration: _buildSearchDecoration(),
               ),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.message, color: accentColor),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MessagingPage(
-                      contactName: "Danish",
-                      contactImage: "assets/images/man.jpg",
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            titleSpacing: 8,
           ),
           // Removed the stories section permanently.
           body: DefaultTabController(
             length: 2,
             child: Column(
               children: [
-                const TabBar(
-                  isScrollable: true,
-                  labelColor: Colors.black,
-                  indicatorColor: Colors.black,
-                  unselectedLabelColor: accentColor,
-                  labelStyle:
-                      TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  unselectedLabelStyle:
-                      TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                  labelPadding: EdgeInsets.symmetric(horizontal: 20),
-                  tabs: [
-                    Tab(text: 'For You'),
-                    Tab(text: 'Following'),
-                  ],
+                const SizedBox(height: 12),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TabBar(
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.grey[600],
+                    indicator: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    tabs: const [
+                      Tab(text: 'For You'),
+                      Tab(text: 'Following'),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 8),
                 const Expanded(
                   child: TabBarView(
                     children: [
@@ -182,7 +198,8 @@ class _CommunityPageState extends State<CommunityPage> {
               context,
               MaterialPageRoute(builder: (context) => const CreatePostPage()),
             ),
-            backgroundColor: primaryColor,
+            backgroundColor: const Color(0xFF6C3DE8),
+            foregroundColor: Colors.white,
             child: const Icon(Icons.add, size: 30),
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -626,10 +643,14 @@ class _PostCardState extends State<PostCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(10),
-      color: secondaryColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 5,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      elevation: 1,
+      shadowColor: Colors.black26,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -691,24 +712,20 @@ class _PostCardState extends State<PostCard> {
               ],
             ),
           ),
+          if (caption.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(
+                caption,
+                style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.35),
+                textAlign: TextAlign.left,
+              ),
+            ),
           if (postImage.isNotEmpty)
             GestureDetector(
               onTap: _openFullImage,
-              child: Image.network(
-                postImage,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: 200,
-              ),
+              child: FacebookPostImage(imageUrl: postImage),
             ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Text(
-              caption,
-              style: const TextStyle(fontSize: 14, color: Colors.black),
-              textAlign: TextAlign.center,
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
@@ -723,6 +740,102 @@ class _PostCardState extends State<PostCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Full-bleed feed photo, sized like Facebook:
+/// width fills the card, height follows the photo, clamped between 1.91:1 and 4:5.
+class FacebookPostImage extends StatefulWidget {
+  final String imageUrl;
+  const FacebookPostImage({Key? key, required this.imageUrl}) : super(key: key);
+
+  @override
+  State<FacebookPostImage> createState() => _FacebookPostImageState();
+}
+
+class _FacebookPostImageState extends State<FacebookPostImage> {
+  static const double _minAspectRatio = 0.8; // 4:5 portrait
+  static const double _maxAspectRatio = 1.91; // Facebook landscape
+  double _aspectRatio = 1.0;
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant FacebookPostImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _resolveImage();
+    }
+  }
+
+  void _resolveImage() {
+    _removeListener();
+    final provider = NetworkImage(widget.imageUrl);
+    _stream = provider.resolve(const ImageConfiguration());
+    _listener = ImageStreamListener((info, _) {
+      final width = info.image.width.toDouble();
+      final height = info.image.height.toDouble();
+      if (width <= 0 || height <= 0) return;
+      final ratio = (width / height).clamp(_minAspectRatio, _maxAspectRatio);
+      if (mounted && (ratio - _aspectRatio).abs() > 0.01) {
+        setState(() => _aspectRatio = ratio);
+      }
+    }, onError: (_, __) {});
+    _stream!.addListener(_listener!);
+  }
+
+  void _removeListener() {
+    if (_stream != null && _listener != null) {
+      _stream!.removeListener(_listener!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeListener();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black,
+      child: AspectRatio(
+        aspectRatio: _aspectRatio,
+        child: Image.network(
+          widget.imageUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          alignment: Alignment.center,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return ColoredBox(
+              color: Colors.grey.shade200,
+              child: Icon(
+                Icons.broken_image_outlined,
+                color: Colors.grey.shade500,
+                size: 40,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -887,9 +1000,21 @@ class _CreatePostPageState extends State<CreatePostPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F7),
       appBar: AppBar(
-        title: const Text("Create Post"),
-        backgroundColor: primaryColor,
+        title: const Text("Create Post", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -936,7 +1061,21 @@ class FullImagePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: primaryColor),
+      backgroundColor: const Color(0xFFF5F5F7),
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Center(child: InteractiveViewer(child: Image.network(imageUrl))),
     );
   }
@@ -994,8 +1133,22 @@ class _CommentsPageState extends State<CommentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-          AppBar(title: const Text("Comments"), backgroundColor: primaryColor),
+      backgroundColor: const Color(0xFFF5F5F7),
+      appBar: AppBar(
+        title: const Text("Comments", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Column(
         children: [
           Expanded(

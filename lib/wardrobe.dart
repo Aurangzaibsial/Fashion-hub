@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MyWardrobe extends StatefulWidget {
   const MyWardrobe({Key? key}) : super(key: key);
@@ -39,7 +40,22 @@ class _MyWardrobeState extends State<MyWardrobe>
   }
 
   Future<void> _deleteItem(String docId) async {
+    final doc = await _wardrobeCollection.doc(docId).get();
+    final data = doc.data() as Map<String, dynamic>?;
+    final imageUrl = data?['imageUrl'];
     await _wardrobeCollection.doc(docId).delete();
+
+    if (imageUrl != null) {
+      final embs = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('embeddings')
+          .where('imageUrl', isEqualTo: imageUrl)
+          .get();
+      for (final e in embs.docs) {
+        await e.reference.delete();
+      }
+    }
   }
 
   Future<String?> uploadImageToCloudinary({
@@ -384,19 +400,25 @@ class _MyWardrobeState extends State<MyWardrobe>
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF9EA5FF),
-            borderRadius: BorderRadius.circular(15),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3)),
+            ],
           ),
           child: Column(
             children: [
               const Text("My Wardrobe",
                   style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
-              const SizedBox(height: 8),
-              const Text("Easily manage and organize your outfits",
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                      color: Color(0xFF1A1A2E))),
+              const SizedBox(height: 6),
+              Text("Easily manage and organize your outfits",
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   textAlign: TextAlign.center),
               const SizedBox(height: 16),
               Row(
@@ -427,18 +449,24 @@ class _MyWardrobeState extends State<MyWardrobe>
                       children: [
                         _buildInfoText("Collection", wardrobeCount.toString()),
                         _buildInfoText("Designed", designedCount.toString()),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Row(
                           children: [
                             Expanded(
                               child: ElevatedButton(
                                 onPressed: () => _showAddItemDialog(context),
                                 style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.purple,
-                                    foregroundColor: Colors.white),
+                                  backgroundColor: const Color(0xFF6C3DE8),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                  elevation: 0,
+                                ),
                                 child: const Text(
-                                  "Add to Collection",
+                                  "Add Item",
                                   textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 12),
                                 ),
                               ),
                             ),
@@ -448,9 +476,15 @@ class _MyWardrobeState extends State<MyWardrobe>
                                 onPressed: () =>
                                     _showRecommendationDialog(context),
                                 style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white),
-                                child: const Text("Suggest Outfit"),
+                                  backgroundColor: const Color(0xFFE040AB),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                  elevation: 0,
+                                ),
+                                child: const Text("Suggest Outfit",
+                                    style: TextStyle(fontSize: 12)),
                               ),
                             ),
                           ],
@@ -517,15 +551,29 @@ class _MyWardrobeState extends State<MyWardrobe>
   Widget _buildTabs() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
       ),
       child: TabBar(
         controller: _tabController,
         isScrollable: true,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.white70,
-        indicatorColor: Colors.black,
+        unselectedLabelColor: Colors.grey[600],
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
         tabs: const [
           Tab(text: 'All'),
           Tab(text: 'Tops'),
@@ -580,67 +628,187 @@ class _MyWardrobeState extends State<MyWardrobe>
         : query.where('category', isEqualTo: category).snapshots();
   }
 
+  Future<String> _getLiveWeatherCondition() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return 'Clear';
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return 'Clear';
+      }
+      if (permission == LocationPermission.deniedForever) return 'Clear';
+
+      Position? pos = await Geolocator.getLastKnownPosition();
+      pos ??= await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 2),
+      );
+
+      const apiKey = "14b585681dce3dfb33835";
+      final url =
+          'https://api.openweathermap.org/data/2.5/weather?lat=${pos.latitude}&lon=${pos.longitude}&appid=$apiKey';
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 2));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['weather'][0]['main'].toString();
+      }
+    } catch (e) {
+      debugPrint("Weather fetch fast-fallback: $e");
+    }
+    return 'Clear';
+  }
+
   void _showRecommendationDialog(BuildContext context) {
     bool loading = false;
     Map<String, dynamic>? outfit;
+    String selectedWeather = 'Sunny';
+    bool fetchedWeather = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          title: const Text("Smart Outfit Suggestion"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.upload),
-                label: const Text("Select Outfit Image"),
-                onPressed: () async {
-                  final picker = ImagePicker();
-                  final picked =
-                      await picker.pickImage(source: ImageSource.gallery);
-                  if (picked != null) {
-                    setStateDialog(() => loading = true);
-                    final result = await _getSmartRecommendations(picked);
-                    setStateDialog(() {
-                      outfit = result;
-                      loading = false;
-                    });
-                  }
-                },
+        builder: (context, setStateDialog) {
+          if (!fetchedWeather) {
+            fetchedWeather = true;
+            _getLiveWeatherCondition().then((liveWeather) {
+              setStateDialog(() {
+                selectedWeather = liveWeather;
+              });
+            });
+          }
+
+          final weatherOptions = [
+            'Sunny',
+            'Summer',
+            'Rainy',
+            'Cold',
+            'Winter',
+            'Clouds',
+            'Haze',
+            'Casual',
+          ];
+          if (!weatherOptions.contains(selectedWeather)) {
+            weatherOptions.insert(0, selectedWeather);
+          }
+
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Color.fromARGB(255, 198, 82, 136)),
+                SizedBox(width: 8),
+                Text("Smart Outfit Suggestion", style: TextStyle(fontSize: 18)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Weather / Occasion Context:",
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: selectedWeather,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(Icons.wb_sunny_outlined, size: 20),
+                    ),
+                    items: weatherOptions
+                        .map((w) => DropdownMenuItem(value: w, child: Text(w)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setStateDialog(() => selectedWeather = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.upload),
+                      label: const Text("Select Outfit Image"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      onPressed: () async {
+                        final picker = ImagePicker();
+                        final picked =
+                            await picker.pickImage(source: ImageSource.gallery);
+                        if (picked != null) {
+                          setStateDialog(() => loading = true);
+                          final result = await _getSmartRecommendations(
+                            picked,
+                            selectedWeather,
+                          );
+                          setStateDialog(() {
+                            outfit = result;
+                            loading = false;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (loading) const Center(child: CircularProgressIndicator()),
+                  if (outfit != null) ...[
+                    const Divider(),
+                    ...outfit!.entries.map((entry) {
+                      final cat = entry.key;
+                      final item = entry.value;
+                      return item['imageUrl'] == ""
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Text("❌ Not enough ${cat.toLowerCase()} to recommend",
+                                  style: const TextStyle(color: Colors.redAccent)),
+                            )
+                          : ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  item['imageUrl'],
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, stack) =>
+                                      const Icon(Icons.broken_image),
+                                ),
+                              ),
+                              title: Text(item['title'] ?? 'Untitled',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              subtitle: Text("$cat • $selectedWeather",
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                            );
+                    }),
+                  ],
+                ],
               ),
-              const SizedBox(height: 12),
-              if (loading) const CircularProgressIndicator(),
-              if (outfit != null)
-                ...outfit!.entries.map((entry) {
-                  final cat = entry.key;
-                  final item = entry.value;
-                  return item['imageUrl'] == ""
-                      ? Text("❌ Not enough ${cat.toLowerCase()} to recommend")
-                      : ListTile(
-                          leading: Image.network(item['imageUrl'],
-                              width: 50, fit: BoxFit.cover),
-                          title: Text(item['title']),
-                          subtitle: Text(cat),
-                        );
-                }),
-            ],
-          ),
-          actions: [
-            TextButton(
+            ),
+            actions: [
+              TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Close")),
-          ],
-        ),
+                child: const Text("Close"),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   Future<Map<String, dynamic>?> _getSmartRecommendations(
-      XFile pickedFile) async {
+      XFile pickedFile, String weather) async {
     try {
       final uri = Uri.parse(
-          "http://127.0.0.1:8000/recommend-outfit?userId=$_userId");
+          "http://127.0.0.1:8000/recommend-outfit?userId=$_userId&weather=${Uri.encodeComponent(weather)}");
       final request = http.MultipartRequest('POST', uri);
 
       if (kIsWeb) {
@@ -693,18 +861,37 @@ class _MyWardrobeState extends State<MyWardrobe>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF7D86FF),
+      backgroundColor: const Color(0xFFF5F5F7),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        title: const Text(
+          'My Wardrobe',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
             children: [
               _buildHeader(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               _buildSearchBar(),
+              const SizedBox(height: 6),
               _buildTabs(),
               SizedBox(
-                height: MediaQuery.of(context).size.height * 0.68,
+                height: MediaQuery.of(context).size.height * 0.60,
                 child: TabBarView(
                   controller: _tabController,
                   children: [

@@ -463,41 +463,55 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 20),
         if (effectiveUserId == _auth.currentUser!.uid)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(
-                      color: Color.fromARGB(255, 5, 80, 241), width: 2),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const Preferences()),
+                      );
+                    },
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Text("Preferences",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13)),
+                      ),
+                    ),
+                  ),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const Preferences()),
-                  );
-                },
-                child: const Text("Preferences",
-                    style: TextStyle(color: Colors.black)),
-              ),
-              const SizedBox(width: 70),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(
-                      color: Color.fromARGB(255, 5, 80, 241), width: 2),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF6C3DE8), width: 1.5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => _showEditProfileDialog(userData),
+                    child: const Text("Edit Profile",
+                        style: TextStyle(
+                            color: Color(0xFF6C3DE8), fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
                 ),
-                onPressed: () => _showEditProfileDialog(userData),
-                child: const Text("Edit Profile",
-                    style: TextStyle(color: Colors.black)),
-              ),
-            ],
+              ],
+            ),
           ),
       ],
     );
@@ -507,16 +521,34 @@ class _ProfilePageState extends State<ProfilePage> {
     Widget content = Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration:
-              BoxDecoration(color: Colors.pink[100], shape: BoxShape.circle),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6C3DE8).withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Text(value,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.white)),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A1A2E))),
       ],
     );
     if (onTap != null) {
@@ -598,11 +630,13 @@ class _ProfilePageState extends State<ProfilePage> {
           if (fullName.isEmpty) fullName = "Anonymous";
         }
         return Card(
-          margin: const EdgeInsets.all(10),
-          color: const Color.fromARGB(255, 125, 134, 255),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          elevation: 5,
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.grey.shade100)),
+          elevation: 2,
+          shadowColor: Colors.black12,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -750,7 +784,7 @@ class _ProfilePageState extends State<ProfilePage> {
       return const Scaffold(body: Center(child: Text('Please sign in')));
     }
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 125, 134, 255),
+      backgroundColor: const Color(0xFFF5F5F7),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _usersRef.doc(effectiveUserId).snapshots(),
         builder: (context, snapshot) {

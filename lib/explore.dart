@@ -70,144 +70,141 @@ class _ExplorePageState extends State<ExplorePage> {
     _debounce?.cancel();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F7),
       appBar: AppBar(
-        title: const Text("Fashion Trends"),
-        backgroundColor: const Color.fromARGB(255, 84, 255, 68),
+        centerTitle: true,
+        title: const Text("Fashion Trends", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddPost,
+        backgroundColor: const Color(0xFF6C3DE8),
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
-      backgroundColor: const Color.fromARGB(255, 125, 134, 255),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              const SizedBox(height: 20),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  "Fashion Trends",
+                  "Discover",
                   style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    color: Color(0xFF1A1A2E),
                   ),
                 ),
               ),
-              const SizedBox(height: 5),
-              const Center(
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   "Stay stylish with the latest trends",
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Color.fromARGB(255, 26, 26, 26),
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 24),
               // Search bar with debounced input.
-              Container(
-                width: MediaQuery.of(context).size.width * 0.85,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      blurRadius: 6,
-                      spreadRadius: 1,
+              Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search Designs',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF6C3DE8)),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.clear, color: Colors.grey),
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search Designs',
-                    prefixIcon: const Icon(Icons.search, color: Colors.black),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                            },
-                            icon: const Icon(Icons.clear, color: Colors.black),
-                          )
-                        : null,
-                    border: InputBorder.none,
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 24),
               // Filter options.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Column(
-                    children: [
-                      InkWell(
-                        onTap: () => _changeFilter("Events"),
-                        child: Image.asset(
-                          'assets/images/event.png',
-                          width: 65,
-                          height: 65,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: ["Design", "Events", "Weather"].map((filter) {
+                    final isSelected = _selectedFilter == filter;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12.0),
+                      child: ChoiceChip(
+                        label: Text(
+                          filter,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : const Color(0xFF6C3DE8),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const Text(
-                        "Events",
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      InkWell(
-                        onTap: () => _changeFilter("Weather"),
-                        child: Image.asset(
-                          'assets/images/sun.png',
-                          width: 65,
-                          height: 65,
+                        selected: isSelected,
+                        onSelected: (_) => _changeFilter(filter),
+                        backgroundColor: Colors.white,
+                        selectedColor: const Color(0xFF6C3DE8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: isSelected ? Colors.transparent : const Color(0xFF6C3DE8),
+                          ),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
-                      const Text(
-                        "Weather",
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      InkWell(
-                        onTap: () => _changeFilter("Design"),
-                        child: Image.asset(
-                          'assets/images/hanger.png',
-                          width: 65,
-                          height: 65,
-                        ),
-                      ),
-                      const Text(
-                        "Design",
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ],
+                    );
+                  }).toList(),
+                ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 24),
               const Text(
                 "Influencer's Choice",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E)),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 12),
               StreamBuilder<QuerySnapshot>(
                 stream: _trendingPostsStream,
                 builder: (context, snapshot) {
@@ -308,178 +305,137 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
     final String caption = postData['caption'] ?? '';
     final String postImage = postData['postImage'] ?? '';
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        UserInfoCard(userId: postData['userId'] ?? ''),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Card(
-            color: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 24),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.grey.shade100),
+      ),
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(postData['userId'] ?? '').get(),
+              builder: (context, snapshot) {
+                String profileImg = 'assets/images/profile.jpg';
+                String userName = 'Anonymous';
+                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  userName = "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+                  if (userName.isEmpty) userName = "Anonymous";
+                  if (data['profileImage'] != null && (data['profileImage'] as String).startsWith("http")) {
+                    profileImg = data['profileImage'];
+                  }
+                }
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: profileImg.startsWith("http")
+                          ? CachedNetworkImageProvider(profileImg)
+                          : AssetImage(profileImg) as ImageProvider,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      userName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1A1A2E)),
+                    ),
+                  ],
+                );
+              },
             ),
-            elevation: 3,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          // Large Image
+          if (postImage.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => FullImagePage(imageUrl: postImage)));
+              },
+              child: ClipRRect(
+                child: CachedNetworkImage(
+                  imageUrl: postImage,
+                  width: double.infinity,
+                  height: MediaQuery.of(context).size.width * 0.8,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    height: MediaQuery.of(context).size.width * 0.8,
+                    color: Colors.grey.shade100,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                ),
+              ),
+            ),
+          // Post Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  designName,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E)),
+                ),
+                const SizedBox(height: 6),
+                ExpandableText(text: caption, trimLength: 80),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          designName,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 5),
-                        Container(
-                          margin: const EdgeInsets.only(top: 10, bottom: 15),
-                          width: MediaQuery.of(context).size.width * 0.35,
-                          child: ExpandableText(text: caption, trimLength: 50),
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: _toggleVote,
-                              icon: Icon(
-                                isVoted
-                                    ? Icons.thumb_up
-                                    : Icons.thumb_up_outlined,
-                                color: Colors.black,
-                              ),
+                        InkWell(
+                          onTap: _toggleVote,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isVoted ? const Color(0xFF6C3DE8).withOpacity(0.1) : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            Text(
-                              "$voteCount Votes",
-                              style: const TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isVoted ? Icons.favorite : Icons.favorite_border,
+                                  color: isVoted ? const Color(0xFFE040AB) : Colors.grey.shade600,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "$voteCount",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isVoted ? const Color(0xFFE040AB) : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  FullImagePage(imageUrl: postImage)),
-                        );
-                      },
-                      // Use CachedNetworkImage for consistent caching and error handling.
-                      child: CachedNetworkImage(
-                        imageUrl: postImage,
-                        width: MediaQuery.of(context).size.width * 0.20,
-                        height: MediaQuery.of(context).size.width * 0.25,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const CircularProgressIndicator(),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.error),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.share_outlined, color: Colors.grey),
+                      onPressed: () {},
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class UserInfoCard extends StatefulWidget {
-  final String userId;
-  const UserInfoCard({Key? key, required this.userId}) : super(key: key);
-
-  @override
-  State<UserInfoCard> createState() => _UserInfoCardState();
-}
-
-class _UserInfoCardState extends State<UserInfoCard> {
-  late Future<DocumentSnapshot> _userFuture;
-  @override
-  void initState() {
-    super.initState();
-    _userFuture =
-        FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<DocumentSnapshot>(
-      future: _userFuture,
-      builder: (context, snapshot) {
-        String profileImg = 'assets/images/profile.jpg';
-        String userName = 'Anonymous';
-        if (snapshot.connectionState == ConnectionState.done &&
-            snapshot.hasData &&
-            snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          userName =
-              "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
-          if (userName.isEmpty) userName = "Anonymous";
-          if (data['profileImage'] != null &&
-              (data['profileImage'] as String).startsWith("http")) {
-            profileImg = data['profileImage'];
-          }
-        }
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildProfileImage(profileImg),
-            const SizedBox(height: 5),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: Text(
-                userName,
-                textAlign: TextAlign.center,
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileImage(String profileImg) {
-    if (profileImg.startsWith("http")) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: CachedNetworkImage(
-          imageUrl: profileImg,
-          width: MediaQuery.of(context).size.width * 0.14,
-          height: MediaQuery.of(context).size.width * 0.16,
-          fit: BoxFit.cover,
-          placeholder: (context, url) =>
-              const CircularProgressIndicator(strokeWidth: 2),
-          errorWidget: (context, url, error) => const Icon(Icons.error),
-        ),
-      );
-    } else {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Image.asset(
-          profileImg,
-          width: MediaQuery.of(context).size.width * 0.14,
-          height: MediaQuery.of(context).size.width * 0.16,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-  }
-}
+// UserInfoCard removed as it's now inline
 
 class ExpandableText extends StatefulWidget {
   final String text;

@@ -57,48 +57,79 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
     return Scaffold(
       body: pages[selectedIndex],
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue, Color.fromARGB(255, 39, 87, 176)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: selectedIndex,
-          onTap: onItemTapped,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white.withOpacity(0.7),
-          items: [
-            _buildAnimatedItem(
-                Icons.home_outlined, Icons.home_filled, "Home", 0),
-            _buildAnimatedItem(
-                Icons.shopping_bag_outlined, Icons.shopping_bag, "Wardrobe", 1),
-            _buildAnimatedItem(
-                Icons.people_alt_outlined, Icons.people, "Community", 2),
-            _buildAnimatedItem(Icons.travel_explore_outlined,
-                Icons.travel_explore, "Explore", 3),
-            _buildAnimatedItem(
-                Icons.person_2_outlined, Icons.person, "Profile", 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
           ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.home_outlined, Icons.home_rounded, "Home", 0),
+                _buildNavItem(Icons.checkroom_outlined, Icons.checkroom_rounded, "Wardrobe", 1),
+                _buildNavItem(Icons.people_alt_outlined, Icons.people_alt_rounded, "Community", 2),
+                _buildNavItem(Icons.explore_outlined, Icons.explore_rounded, "Explore", 3),
+                _buildNavItem(Icons.person_outline_rounded, Icons.person_rounded, "Profile", 4),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  BottomNavigationBarItem _buildAnimatedItem(
-      IconData icon, IconData activeIcon, String label, int index) {
-    return BottomNavigationBarItem(
-      icon: selectedIndex == index
-          ? ScaleTransition(
-              scale: _animation,
-              child: Icon(activeIcon),
-            )
-          : Icon(icon),
-      label: label,
+  Widget _buildNavItem(IconData icon, IconData activeIcon, String label, int index) {
+    final bool isSelected = selectedIndex == index;
+    return GestureDetector(
+      onTap: () => onItemTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: isSelected
+            ? BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              )
+            : null,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ScaleTransition(
+              scale: isSelected ? _animation : const AlwaysStoppedAnimation(1.0),
+              child: Icon(
+                isSelected ? activeIcon : icon,
+                color: isSelected ? Colors.white : const Color(0xFFAAAAAA),
+                size: 22,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

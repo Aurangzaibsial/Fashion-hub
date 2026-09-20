@@ -118,15 +118,24 @@ class _PreferencesState extends State<Preferences> {
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 125, 134, 255),
+      backgroundColor: const Color(0xFFF5F5F7),
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         title: const Text('Style Preferences',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color.fromARGB(226, 94, 110, 255),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         foregroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -232,11 +241,11 @@ class _PreferencesState extends State<Preferences> {
             style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87)),
+                color: Color(0xFF1A1A2E))),
         const SizedBox(height: 8),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 14, color: Colors.white),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
@@ -388,27 +397,42 @@ class _PreferencesState extends State<Preferences> {
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
-              side: BorderSide(color: Colors.grey.shade300),
+              side: const BorderSide(color: Color(0xFF6C3DE8), width: 1.5),
             ),
-            child:
-                const Text('Cancel', style: TextStyle(color: Colors.black87)),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    color: Color(0xFF6C3DE8), fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: ElevatedButton(
-            onPressed: _savePreferences,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: GestureDetector(
+            onTap: _savePreferences,
+            child: Container(
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6C3DE8).withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text('Save Preferences',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
               ),
             ),
-            child: const Text('Save Preferences',
-                style: TextStyle(color: Colors.white)),
           ),
         ),
       ],
