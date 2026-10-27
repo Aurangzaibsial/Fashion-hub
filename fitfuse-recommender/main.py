@@ -13,7 +13,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from sklearn.metrics.pairwise import cosine_similarity
 import io
+from urllib.parse import urlparse
 from image_validator import validate_wardrobe_image, log_security_alert_to_firestore
+import clip_helper
 
 # --- Device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -77,6 +79,9 @@ def compute_combined_embedding(image_bytes: bytes, title: str="") -> torch.Tenso
 app = FastAPI(title="NextGen Cloth Engine AI – Pre‑Embedded Recommender")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# Image URLs are fetched server-side, so only trusted image hosts are allowed
+ALLOWED_IMAGE_HOSTS = {"res.cloudinary.com", "images.unsplash.com"}
+
 # --- Data Model for Embeds ---
 class EmbedItem(BaseModel):
     userId:   str
@@ -84,6 +89,40 @@ class EmbedItem(BaseModel):
     title:    str
     category: str
     occasion: str = "All"
+    oldImageUrl: str = ""   # set when an edit replaces the item's photo
+
+@app.post("/check-category")
+async def check_category_endpoint(
+    category: str = Query(...),
+    file: UploadFile = File(None),
+    imageUrl: str = Query(default=None),
+):
+    """
+    Compares a photo with the wardrobe category the user picked.
+    Send either an uploaded `file` or an `imageUrl` of an already saved photo.
+    status: "match" | "mismatch" (predicted category + confidence) | "unsure".
+    The app only warns on "mismatch" and always lets the user keep their choice.
+    """
+    if file is not None:
+        img_bytes = await file.read()
+    elif imageUrl:
+        parsed = urlparse(imageUrl)
+        if parsed.scheme != "https" or parsed.hostname not in ALLOWED_IMAGE_HOSTS:
+            raise HTTPException(400, "Image URL host is not allowed")
+        try:
+            resp = requests.get(imageUrl, timeout=15)
+        except requests.RequestException:
+            raise HTTPException(400, "Could not fetch image URL")
+        if resp.status_code != 200:
+            raise HTTPException(400, "Invalid image URL")
+        img_bytes = resp.content
+    else:
+        raise HTTPException(400, "Provide a file or an imageUrl")
+    try:
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    except Exception:
+        raise HTTPException(400, "Not a valid image")
+    return clip_helper.check_category(img, category)
 
 @app.post("/validate-image")
 async def validate_image_endpoint(
@@ -161,8 +200,15 @@ def embed_item(data: EmbedItem):
     vis_vec  = compute_visual_embedding(img_bytes).tolist()
     comb_vec = compute_combined_embedding(img_bytes, data.title).tolist()
 
-    db.collection("users").document(data.userId)\
-      .collection("embeddings").add({
+    emb_col = db.collection("users").document(data.userId).collection("embeddings")
+    # Replace (not duplicate) the embedding of this photo, and drop the old photo's one
+    stale_urls = {u for u in (data.imageUrl, data.oldImageUrl) if u}
+    for e in list(emb_col.stream()):
+        if (e.to_dict() or {}).get("imageUrl") in stale_urls:
+            e.reference.delete()
+    embeddings_cache.pop(data.userId, None)
+
+    emb_col.add({
         "title":              data.title,
         "imageUrl":           data.imageUrl,
         "category":           data.category,

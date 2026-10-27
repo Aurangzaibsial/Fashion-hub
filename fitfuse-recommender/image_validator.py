@@ -12,6 +12,7 @@ import torch
 import numpy as np
 from PIL import Image
 from torchvision import models, transforms
+import clip_helper
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -217,6 +218,13 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
     wardrobe_prob_sum = sum(prob for _, prob in wardrobe_matches)
     top_is_wardrobe = is_wardrobe_category(top_class_name)
     looks_like_clothing = top_is_wardrobe or wardrobe_prob_sum >= 0.15
+
+    # ImageNet has no class for many garments (dress shoes, hoodies...). When it sees no
+    # clothing, ask CLIP: a high "clothing / footwear / accessory" score also counts.
+    if not looks_like_clothing:
+        clip_res = clip_helper.analyze(img)
+        if clip_res is not None and clip_res["clothing"] >= 0.6:
+            looks_like_clothing = True
 
     # 2. Weapons / blades / dangerous objects (always enforced)
     detected_weapons = []
