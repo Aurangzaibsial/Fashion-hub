@@ -5,6 +5,7 @@ import 'package:fitfuseapp/login.dart';
 import 'package:fitfuseapp/preferences.dart';
 import 'package:fitfuseapp/admin/admin_dashboard.dart';
 import 'package:flutter/material.dart';
+import 'package:fitfuseapp/image_guard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -82,6 +83,16 @@ class _ProfilePageState extends State<ProfilePage> {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null && _currentUser != null) {
       try {
+        final verdict = await checkImage(
+          bytes: await picked.readAsBytes(),
+          userId: _currentUser!.uid,
+          action: 'profile_picture',
+          mode: 'safety',
+        );
+        if (!verdict.allowed) {
+          if (mounted) showImageRejection(context, verdict);
+          return;
+        }
         final imageUrl = await _uploadToCloudinary(picked);
         if (imageUrl.isNotEmpty) {
           await _usersRef

@@ -60,17 +60,22 @@ WARDROBE_KEYWORDS = [
     "swimming trunks", "maillot tank suit", "bulletproof vest"
 ]
 
-# Exclusions for words that have partial substring matches but are NOT clothing
-NON_WARDROBE_SUBSTRING_EXCLUSIONS = {
-    "hatchet", "harvestman", "capuchin", "bottlecap", "lens cap", "thatch",
-    "harvester", "soft-coated wheaten terrier", "flat-coated retriever", "curly-coated retriever"
+# Exact ImageNet class names (case-sensitive: "Cardigan" is a dog, "cardigan" is a sweater)
+WARDROBE_CLASSES = {
+    "abaya", "academic gown", "apron", "backpack", "bathing cap", "bearskin",
+    "bikini", "bolo tie", "bonnet", "bow tie", "brassiere", "bulletproof vest",
+    "cardigan", "cloak", "clog", "cowboy boot", "cowboy hat", "diaper",
+    "feather boa", "fur coat", "gown", "hoopskirt", "jean", "jersey", "kimono",
+    "lab coat", "Loafer", "maillot", "maillot tank suit", "military uniform",
+    "miniskirt", "mitten", "necklace", "overskirt", "pajama", "poncho", "purse",
+    "running shoe", "sandal", "sarong", "shower cap", "sock", "sombrero",
+    "stole", "suit", "sunglass", "sunglasses", "sweatshirt", "swimming trunks",
+    "trench coat", "vestment", "wallet", "Windsor tie", "wool", "mortarboard",
+    "pickelhaube", "Christmas stocking", "handkerchief", "hair slide",
 }
 
 def is_wardrobe_category(cls_name: str) -> bool:
-    lower = cls_name.lower()
-    if any(ex in lower for ex in NON_WARDROBE_SUBSTRING_EXCLUSIONS):
-        return False
-    return any(kw in lower for kw in WARDROBE_KEYWORDS)
+    return cls_name in WARDROBE_CLASSES
 
 # Clearly non-wardrobe objects — block these when detected with high confidence
 BLOCKED_OBJECTS = {
@@ -115,7 +120,7 @@ BLOCKED_KEYWORDS = [
 ]
 
 
-def check_blood_or_gore(img: Image.Image) -> tuple[bool, str]:
+def check_blood_or_gore(img: Image.Image, threshold: float = 0.04) -> tuple[bool, str]:
     """
     Analyzes color saturation to detect high-concentration blood/gore patterns.
     """
@@ -129,8 +134,8 @@ def check_blood_or_gore(img: Image.Image) -> tuple[bool, str]:
         blood_mask = (r > 130) & (g < 60) & (b < 60) & ((r - np.maximum(g, b)) > 60)
         blood_ratio = float(np.mean(blood_mask))
 
-        # If more than 4% of the image is deep blood crimson red with high saturation
-        if blood_ratio > 0.04:
+        # If more than `threshold` of the image is deep blood crimson red with high saturation
+        if blood_ratio > threshold:
             return True, f"Blood/violence crimson tone detected ({round(blood_ratio * 100, 1)}% of frame)"
     except Exception as e:
         print(f"Blood heuristic check error: {e}")
@@ -173,9 +178,11 @@ def check_document_or_screenshot(img: Image.Image) -> tuple[bool, str]:
     return False, ""
 
 
-def validate_wardrobe_image(image_bytes: bytes) -> dict:
+def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
     """
     Validates whether the uploaded image is safe and wardrobe-related.
+    mode="wardrobe": must be a clothing/footwear/accessory photo (strict).
+    mode="safety":   only rejects documents, weapons and gore (profile/community photos).
     Returns:
         {
             "is_valid": bool,
@@ -196,29 +203,7 @@ def validate_wardrobe_image(image_bytes: bytes) -> dict:
             "confidence": 0.0
         }
 
-    # 1. Document / Screenshot / PDF check (pixel-level heuristic)
-    is_doc, doc_msg = check_document_or_screenshot(img)
-    if is_doc:
-        return {
-            "is_valid": False,
-            "violation_type": "NON_WARDROBE_ITEM",
-            "message": f"Unauthorized image: {doc_msg}",
-            "detected_items": ["document / screenshot / pdf"],
-            "confidence": 0.95
-        }
-
-    # 2. Blood / Violence heuristic check
-    is_blood, blood_msg = check_blood_or_gore(img)
-    if is_blood:
-        return {
-            "is_valid": False,
-            "violation_type": "BLOOD_VIOLENCE_DETECTED",
-            "message": "Unauthorized image: Blood, violence, or gore detected. Only valid wardrobe items are allowed.",
-            "detected_items": ["blood / violent imagery"],
-            "confidence": 0.95
-        }
-
-    # 3. ImageNet Classifications
+    # 1. ImageNet classification (done first: clothing evidence overrides the pixel heuristics)
     tensor = _val_transform(img).unsqueeze(0).to(device)
     with torch.no_grad():
         logits = _classifier_model(tensor)
@@ -226,8 +211,14 @@ def validate_wardrobe_image(image_bytes: bytes) -> dict:
 
     top5_indices = np.argsort(probs)[-5:][::-1]
     top5_classes = [(_categories[idx], float(probs[idx])) for idx in top5_indices]
+    top_class_name, top_class_prob = top5_classes[0]
 
-    # 4. Check for Weapons / Blades / Dangerous objects
+    wardrobe_matches = [(cls, prob) for cls, prob in top5_classes if is_wardrobe_category(cls)]
+    wardrobe_prob_sum = sum(prob for _, prob in wardrobe_matches)
+    top_is_wardrobe = is_wardrobe_category(top_class_name)
+    looks_like_clothing = top_is_wardrobe or wardrobe_prob_sum >= 0.15
+
+    # 2. Weapons / blades / dangerous objects (always enforced)
     detected_weapons = []
     for cls_name, prob in top5_classes:
         lower_name = cls_name.lower()
@@ -238,7 +229,6 @@ def validate_wardrobe_image(image_bytes: bytes) -> dict:
         if is_weapon and prob >= 0.05:
             detected_weapons.append(f"{cls_name} ({round(prob * 100, 1)}%)")
 
-    # Also check full probabilities for high-risk weapon classes
     for w_cls in WEAPON_CLASSES:
         if w_cls in _categories:
             idx = _categories.index(w_cls)
@@ -252,42 +242,48 @@ def validate_wardrobe_image(image_bytes: bytes) -> dict:
             "violation_type": "WEAPON_DETECTED",
             "message": f"Unauthorized image: Prohibited weapon/blade detected [{', '.join(detected_weapons[:2])}]. Weapons, knives, and dangerous items are strictly forbidden.",
             "detected_items": detected_weapons,
-            "confidence": round(float(top5_classes[0][1]), 2)
+            "confidence": round(float(top_class_prob), 2)
         }
 
-    # 5. Check explicitly blocked non-wardrobe objects (animals, vehicles, screens, food, etc.)
-    top_class_name = top5_classes[0][0]
-    top_class_prob = top5_classes[0][1]
-    top_lower = top_class_name.lower()
+    # 3. Document / Screenshot / PDF check (skipped when the classifier sees clothing,
+    #    e.g. a shoe on a white studio background, and in safety mode where plain
+    #    backgrounds are normal)
+    if mode != "safety" and not looks_like_clothing:
+        is_doc, doc_msg = check_document_or_screenshot(img)
+        if is_doc:
+            return {
+                "is_valid": False,
+                "violation_type": "NON_WARDROBE_ITEM",
+                "message": f"Unauthorized image: {doc_msg}",
+                "detected_items": ["document / screenshot / pdf"],
+                "confidence": 0.95
+            }
 
-    is_clearly_blocked = (
-        top_lower in BLOCKED_OBJECTS or
-        any(k in top_lower for k in BLOCKED_KEYWORDS)
-    )
+    # 4. Blood / Violence heuristic (skipped for red clothing, which has the same colours)
+    if not looks_like_clothing:
+        is_blood, blood_msg = check_blood_or_gore(img, 0.20 if mode == "safety" else 0.04)
+        if is_blood:
+            return {
+                "is_valid": False,
+                "violation_type": "BLOOD_VIOLENCE_DETECTED",
+                "message": "Unauthorized image: Blood, violence, or gore detected. Only valid wardrobe items are allowed.",
+                "detected_items": ["blood / violent imagery"],
+                "confidence": 0.95
+            }
 
-    if is_clearly_blocked and top_class_prob >= 0.12:
+    # Safety mode (profile / community photos) stops here
+    if mode == "safety":
         return {
-            "is_valid": False,
-            "violation_type": "NON_WARDROBE_ITEM",
-            "message": (
-                f"Unauthorized image: The uploaded image appears to be '{top_class_name}' "
-                f"({round(top_class_prob * 100, 1)}%), which is not a clothing or wardrobe item. "
-                f"Please upload genuine clothing, footwear, or fashion accessories only."
-            ),
+            "is_valid": True,
+            "violation_type": None,
+            "message": "Image passed safety checks.",
             "detected_items": [top_class_name],
             "confidence": round(top_class_prob, 2)
         }
 
-    # 6. Positive Wardrobe / Clothing Relevance Verification
-    # Check if any top-5 prediction is a legitimate wardrobe category
-    wardrobe_matches = [
-        (cls, prob) for cls, prob in top5_classes if is_wardrobe_category(cls)
-    ]
-    wardrobe_prob_sum = sum(prob for _, prob in wardrobe_matches)
-    top_is_wardrobe = is_wardrobe_category(top_class_name)
-
-    # If no wardrobe categories were found in top-5 OR wardrobe probability is negligible
-    if not top_is_wardrobe and (len(wardrobe_matches) == 0 or wardrobe_prob_sum < 0.08):
+    # 5. Wardrobe mode: the image must look like clothing, footwear or an accessory.
+    #    Anything else (animals, food, vehicles, screens, scenery...) is rejected.
+    if not looks_like_clothing:
         return {
             "is_valid": False,
             "violation_type": "NON_WARDROBE_ITEM",
@@ -300,7 +296,6 @@ def validate_wardrobe_image(image_bytes: bytes) -> dict:
             "confidence": round(top_class_prob, 2)
         }
 
-    # Valid image passed all checks
     matched_label = wardrobe_matches[0][0] if wardrobe_matches else top_class_name
     return {
         "is_valid": True,

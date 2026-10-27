@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:fitfuseapp/image_guard.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitfuseapp/ai_outfit_matcher.dart';
@@ -555,6 +556,16 @@ class _CreateTrendingPostPageState extends State<CreateTrendingPostPage> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
+      final verdict = await checkImage(
+        bytes: await picked.readAsBytes(),
+        userId: FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
+        action: 'explore_post',
+        mode: 'safety',
+      );
+      if (!verdict.allowed) {
+        if (mounted) showImageRejection(context, verdict);
+        return;
+      }
       setState(() {
         _selectedImage = picked;
       });
