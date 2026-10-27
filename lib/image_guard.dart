@@ -74,6 +74,93 @@ Future<ImageCheck> checkImage({
   }
 }
 
+/// Result of [checkCategory].
+class CategoryCheck {
+  /// "match", "mismatch" or "unsure" - only "mismatch" warns the user.
+  final String status;
+
+  /// The category the photo most likely belongs to (when [status] is "mismatch").
+  final String? predicted;
+
+  const CategoryCheck(this.status, this.predicted);
+  bool get isMismatch => status == 'mismatch' && predicted != null;
+}
+
+/// Asks the backend whether a photo fits the wardrobe category the user picked.
+/// Send either [bytes] (a new photo) or [imageUrl] (an already saved photo).
+///
+/// This is only a hint, so it never blocks: if the backend cannot be reached
+/// the answer is "unsure" and the user is not warned.
+Future<CategoryCheck> checkCategory({
+  required String category,
+  Uint8List? bytes,
+  String? imageUrl,
+}) async {
+  try {
+    final query = <String, String>{
+      'category': category,
+      if (bytes == null && imageUrl != null) 'imageUrl': imageUrl,
+    };
+    final uri = Uri.parse('$kRecommenderUrl/check-category').replace(queryParameters: query);
+    final request = http.MultipartRequest('POST', uri);
+    if (bytes != null) {
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: 'upload.jpg',
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    }
+    final response = await request.send().timeout(const Duration(seconds: 30));
+    final data = json.decode(await response.stream.bytesToString());
+    if (response.statusCode == 200 && data is Map) {
+      return CategoryCheck('${data['status']}', data['predicted'] as String?);
+    }
+  } catch (e) {
+    debugPrint('Category check skipped (backend offline or slow): $e');
+  }
+  return const CategoryCheck('unsure', null);
+}
+
+/// Warns that the photo looks like another category. Returns the category to
+/// save: [predicted] if the user accepts the suggestion, [chosen] if they keep
+/// their own choice, or null if they dismiss the dialog (cancel the save).
+Future<String?> showCategoryMismatchDialog(
+  BuildContext context, {
+  required String chosen,
+  required String predicted,
+}) {
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.help_outline_rounded, color: Color(0xFF6C3DE8), size: 26),
+          SizedBox(width: 8),
+          Expanded(child: Text('Check the category', style: TextStyle(fontSize: 18))),
+        ],
+      ),
+      content: Text(
+        'This photo looks like it belongs in "$predicted", but you picked "$chosen". '
+        'Items in the wrong category can lead to wrong outfit suggestions.',
+        style: const TextStyle(fontSize: 14, height: 1.4),
+      ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, chosen),
+          child: Text('Keep "$chosen"'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, predicted),
+          child: Text('Use "$predicted"'),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Tells the user an image was not accepted: the Security Alert dialog for a
 /// rejected image, or a snackbar when it could not be verified.
 void showImageRejection(BuildContext context, ImageCheck result) {

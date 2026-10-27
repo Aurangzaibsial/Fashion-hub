@@ -192,6 +192,17 @@ class _MyWardrobeState extends State<MyWardrobe>
                     return;
                   }
 
+                  // 1b. Warn if the photo looks like another category (user can keep their choice)
+                  final addCategory = await _confirmCategory(
+                    chosen: selectedCategory!,
+                    bytes: selectedImageBytes ?? await selectedImageFile?.readAsBytes(),
+                  );
+                  if (addCategory == null) {
+                    setStateDialog(() => isUploading = false);
+                    return;
+                  }
+                  selectedCategory = addCategory;
+
                   // 2. Upload to Cloudinary
                   final imageUrl = await uploadImageToCloudinary(
                     imageFile: selectedImageFile,
@@ -367,7 +378,9 @@ class _MyWardrobeState extends State<MyWardrobe>
 
                       String? finalImageUrl = data['imageUrl'];
 
-                      if (newImageFile != null || newImageBytes != null) {
+                      final hasNewImage = newImageFile != null || newImageBytes != null;
+
+                      if (hasNewImage) {
                         // AI Safety Validation
                         final valResult = await _validateImageWithAI(
                           imageFile: newImageFile,
@@ -380,7 +393,25 @@ class _MyWardrobeState extends State<MyWardrobe>
                           showImageRejection(context, valResult);
                           return;
                         }
+                      }
 
+                      // Warn if the photo (new or saved) looks like another category.
+                      // Runs when the photo OR the category changed (user can keep their choice).
+                      if (selectedCategory != null &&
+                          (hasNewImage || selectedCategory != data['category'])) {
+                        final editCategory = await _confirmCategory(
+                          chosen: selectedCategory!,
+                          bytes: newImageBytes ?? await newImageFile?.readAsBytes(),
+                          imageUrl: hasNewImage ? null : data['imageUrl']?.toString(),
+                        );
+                        if (editCategory == null) {
+                          setStateDialog(() => isUploading = false);
+                          return;
+                        }
+                        setStateDialog(() => selectedCategory = editCategory);
+                      }
+
+                      if (hasNewImage) {
                         // Upload to Cloudinary
                         final uploadedUrl = await uploadImageToCloudinary(
                           imageFile: newImageFile,
@@ -399,7 +430,13 @@ class _MyWardrobeState extends State<MyWardrobe>
                         if (finalImageUrl != null) 'imageUrl': finalImageUrl,
                       });
 
-                      if (finalImageUrl != null && finalImageUrl != data['imageUrl']) {
+                      // Keep the AI embedding in step with the item (photo, category, occasion or name)
+                      final photoChanged = finalImageUrl != data['imageUrl'];
+                      final detailsChanged = photoChanged ||
+                          selectedCategory != data['category'] ||
+                          selectedOccasion != data['occasion'] ||
+                          nameController.text.trim() != data['name'];
+                      if (finalImageUrl != null && detailsChanged) {
                         try {
                           final embedUri = Uri.parse("$kRecommenderUrl/embed-item");
                           await http.post(
@@ -411,6 +448,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                               'title': nameController.text.trim(),
                               'category': selectedCategory,
                               'occasion': selectedOccasion ?? 'All',
+                              if (photoChanged) 'oldImageUrl': data['imageUrl']?.toString() ?? '',
                             }),
                           );
                         } catch (_) {}
@@ -1009,6 +1047,19 @@ class _MyWardrobeState extends State<MyWardrobe>
 
   void _showSecurityAlertModal(BuildContext ctx, dynamic detail) =>
       showSecurityAlert(ctx, detail);
+
+  /// Warns when the photo looks like a different category than the one picked.
+  /// Returns the category to save, or null if the user dismisses the warning.
+  /// Never blocks: the user can always keep their own choice.
+  Future<String?> _confirmCategory({
+    required String chosen,
+    Uint8List? bytes,
+    String? imageUrl,
+  }) async {
+    final check = await checkCategory(category: chosen, bytes: bytes, imageUrl: imageUrl);
+    if (!check.isMismatch || !mounted) return chosen;
+    return showCategoryMismatchDialog(context, chosen: chosen, predicted: check.predicted!);
+  }
 
   /// Checks an image with the backend. Fails closed: if the backend can't be
   /// reached the result is "unverified" and the image must not be accepted.
