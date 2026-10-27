@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fitfuseapp/image_guard.dart';
 
 class AIOutfitMatcherScreen extends StatefulWidget {
   const AIOutfitMatcherScreen({super.key});
@@ -98,7 +99,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
       // 1. Attempt to call FastAPI PyTorch Recommender Backend
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
       final uri = Uri.parse(
-        'http://127.0.0.1:8000/compare-dresses?userId=${Uri.encodeComponent(uid)}&occasion=${Uri.encodeComponent(_selectedOccasion)}',
+        '$kRecommenderUrl/compare-dresses?userId=${Uri.encodeComponent(uid)}&occasion=${Uri.encodeComponent(_selectedOccasion)}',
       );
       final request = http.MultipartRequest('POST', uri);
 
@@ -116,7 +117,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
         }
       }
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 12));
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
       final respStr = await streamedResponse.stream.bytesToString();
       final jsonResp = jsonDecode(respStr);
 
@@ -141,73 +142,22 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
         return;
       }
     } catch (_) {
-      // Server timed out or running offline -> seamlessly fallback to smart on-device evaluator
+      // Server timed out or is offline - handled below
     }
 
-    // 2. On-Device Fallback Evaluator (Ensures 100% reliability even if Python backend is offline)
-    await Future.delayed(const Duration(milliseconds: 1400));
-    _generateSmartOnDeviceRecommendation();
+    // The images could not be verified by the backend, so they must not be scored:
+    // the on-device evaluator has no safety check.
+    if (!mounted) return;
+    setState(() => _isAnalyzing = false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text(
+        "Couldn't verify the images right now. Please check your connection and try again.",
+      ),
+    ));
   }
 
-  void _showSecurityAlertModal(String message) {
-    showDialog(
-      context: context,
-      builder: (alertCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.gpp_bad_rounded, color: Colors.red, size: 28),
-            SizedBox(width: 8),
-            Text(
-              "Security Alert",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              message,
-              style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.admin_panel_settings, color: Colors.red, size: 22),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "This violation has been logged and sent to the Admin Dashboard for security moderation.",
-                      style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(alertCtx),
-            child: const Text("Understood", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
+  void _showSecurityAlertModal(String message) =>
+      showSecurityAlert(context, message);
 
   void _generateSmartOnDeviceRecommendation() {
     // Generate intelligent score and tailored fashion explanation

@@ -89,7 +89,8 @@ class EmbedItem(BaseModel):
 async def validate_image_endpoint(
     file: UploadFile = File(...),
     userId: str = Query(default="anonymous"),
-    action: str = Query(default="wardrobe_upload")
+    action: str = Query(default="wardrobe_upload"),
+    mode: str = Query(default="wardrobe")
 ):
     """
     Validates whether the uploaded image is a safe and authentic wardrobe/fashion item.
@@ -99,7 +100,7 @@ async def validate_image_endpoint(
         raise HTTPException(415, "Only JPEG/PNG images are allowed")
 
     img_bytes = await file.read()
-    val_res = validate_wardrobe_image(img_bytes)
+    val_res = validate_wardrobe_image(img_bytes, mode="safety" if mode == "safety" else "wardrobe")
 
     if not val_res["is_valid"]:
         log_security_alert_to_firestore(
