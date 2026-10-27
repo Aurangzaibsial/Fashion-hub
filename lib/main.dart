@@ -8,7 +8,7 @@ import 'package:fitfuseapp/startup.dart';
 
 /// true  = Login skip, seedha Home
 /// false = Login page dikhegi
-const bool kSkipLogin = true;
+const bool kSkipLogin = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +38,8 @@ Future<void> ensureGuestSession() async {
       'email': user.email ?? '',
       'profilePicURL': '',
       'profileImage': '',
+      'role': 'user',
+      'isBlocked': false,
       'followers': [],
       'following': [],
       'createdAt': Timestamp.now(),
@@ -52,7 +54,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Fabric Fusion',
+      title: 'NextGen Cloth Engine',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

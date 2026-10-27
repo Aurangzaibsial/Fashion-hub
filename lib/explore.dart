@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:fitfuseapp/ai_outfit_matcher.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -88,6 +89,18 @@ class _ExplorePageState extends State<ExplorePage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: "AI 3-Dress Matcher",
+            icon: const Icon(Icons.auto_awesome, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AIOutfitMatcherScreen()),
+              );
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddPost,

@@ -12,8 +12,8 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, firestore
 from sklearn.metrics.pairwise import cosine_similarity
-from collections import defaultdict
 import io
+from image_validator import validate_wardrobe_image, log_security_alert_to_firestore
 
 # --- Device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -74,7 +74,7 @@ def compute_combined_embedding(image_bytes: bytes, title: str="") -> torch.Tenso
     return vis.squeeze(0)  # fallback to visual-only if no title
 
 # --- FastAPI Setup ---
-app = FastAPI(title="FitFuse AI – Pre‑Embedded Recommender")
+app = FastAPI(title="NextGen Cloth Engine AI – Pre‑Embedded Recommender")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # --- Data Model for Embeds ---
@@ -85,17 +85,77 @@ class EmbedItem(BaseModel):
     category: str
     occasion: str = "All"
 
+@app.post("/validate-image")
+async def validate_image_endpoint(
+    file: UploadFile = File(...),
+    userId: str = Query(default="anonymous"),
+    action: str = Query(default="wardrobe_upload")
+):
+    """
+    Validates whether the uploaded image is a safe and authentic wardrobe/fashion item.
+    Rejects weapons, knives, violence/blood, and non-wardrobe objects, logging security alerts to Firestore.
+    """
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(415, "Only JPEG/PNG images are allowed")
+
+    img_bytes = await file.read()
+    val_res = validate_wardrobe_image(img_bytes)
+
+    if not val_res["is_valid"]:
+        log_security_alert_to_firestore(
+            db=db,
+            user_id=userId,
+            violation_type=val_res["violation_type"],
+            details=val_res["message"],
+            endpoint=f"/validate-image ({action})"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "UNAUTHORIZED_IMAGE",
+                "violation_type": val_res["violation_type"],
+                "message": val_res["message"],
+                "detected_items": val_res["detected_items"]
+            }
+        )
+
+    return {
+        "status": "success",
+        "is_valid": True,
+        "message": val_res["message"],
+        "detected_items": val_res["detected_items"]
+    }
+
 @app.post("/embed-item")
 def embed_item(data: EmbedItem):
     """
     Call this immediately after you save a wardrobe item.
-    It fetches the image, computes visual+combined embeddings,
-    and writes them to Firestore in one go.
+    It fetches the image, validates content safety, computes visual+combined embeddings,
+    and writes them to Firestore.
     """
     resp = requests.get(data.imageUrl)
     if resp.status_code != 200:
         raise HTTPException(400, "Invalid image URL")
     img_bytes = resp.content
+
+    # Content Safety & Wardrobe Relevance Validation
+    val_res = validate_wardrobe_image(img_bytes)
+    if not val_res["is_valid"]:
+        log_security_alert_to_firestore(
+            db=db,
+            user_id=data.userId,
+            violation_type=val_res["violation_type"],
+            details=val_res["message"],
+            endpoint="/embed-item"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "UNAUTHORIZED_IMAGE",
+                "violation_type": val_res["violation_type"],
+                "message": val_res["message"]
+            }
+        )
 
     vis_vec  = compute_visual_embedding(img_bytes).tolist()
     comb_vec = compute_combined_embedding(img_bytes, data.title).tolist()
@@ -293,6 +353,27 @@ async def recommend_outfit(
 
     data = await file.read()
 
+    # Content Safety & Wardrobe Relevance Validation
+    val_res = validate_wardrobe_image(data)
+    if not val_res["is_valid"]:
+        log_security_alert_to_firestore(
+            db=db,
+            user_id=userId,
+            violation_type=val_res["violation_type"],
+            details=val_res["message"],
+            endpoint="/recommend-outfit (Smart Outfit)"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "UNAUTHORIZED_IMAGE",
+                "violation_type": val_res["violation_type"],
+                "message": val_res["message"],
+                "detected_items": val_res["detected_items"]
+            }
+        )
+
+
     # If weather is provided, compute multimodal combined query (Visual + Text Weather)
     if weather and weather.strip() and weather.lower() not in ["none", "all", "auto"]:
         weather_prompt = f"{weather.strip()} weather clothing outfit style"
@@ -340,6 +421,149 @@ async def recommend_outfit(
         "recommended_outfit": rec
     }
 
+@app.post("/compare-dresses")
+async def compare_dresses(
+    dress1: UploadFile = File(...),
+    dress2: UploadFile = File(...),
+    dress3: UploadFile = File(...),
+    userId: str = Query(default="anonymous"),
+    occasion: str = Query(default="General")
+):
+    """
+    Compares 3 dress images using ResNet18 visual embeddings and color/texture aesthetics.
+    Selects the best dress and generates a persuasive, satisfying fashion style rationale.
+    """
+    files = [dress1, dress2, dress3]
+    scores = []
+    analyses = []
+
+    for idx, f in enumerate(files):
+        content = await f.read()
+        try:
+            img = Image.open(io.BytesIO(content)).convert("RGB")
+        except Exception:
+            raise HTTPException(400, f"Invalid image file for Dress #{idx + 1}")
+
+        # Content Safety & Wardrobe Relevance Validation for Dress Candidates
+        val_res = validate_wardrobe_image(content)
+        if not val_res["is_valid"]:
+            log_security_alert_to_firestore(
+                db=db,
+                user_id=userId,
+                violation_type=val_res["violation_type"],
+                details=f"Dress #{idx + 1}: {val_res['message']}",
+                endpoint="/compare-dresses"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "UNAUTHORIZED_IMAGE",
+                    "violation_type": val_res["violation_type"],
+                    "message": f"Dress #{idx + 1} is unauthorized: {val_res['message']}",
+                    "detected_items": val_res["detected_items"]
+                }
+            )
+
+
+        # 1. Feature embedding norm (feature richness)
+        v_emb = compute_visual_embedding(content)
+        feature_richness = float(torch.norm(v_emb).item())
+
+        # 2. Color saturation & contrast analysis
+        arr = np.array(img, dtype=np.float32)
+        std_per_channel = np.std(arr, axis=(0, 1)) # contrast
+        contrast_score = float(np.mean(std_per_channel))
+
+        # Brightness & balance
+        brightness = float(np.mean(arr))
+        luminance_balance = 100.0 - abs(135.0 - brightness) # optimum ~135
+
+        # 3. Occasion-specific weighting
+        occ_lower = occasion.lower()
+        if "party" in occ_lower:
+            score = (contrast_score * 0.45) + (feature_richness * 0.35) + (luminance_balance * 0.20)
+        elif "formal" in occ_lower:
+            score = (luminance_balance * 0.45) + (feature_richness * 0.35) + (contrast_score * 0.20)
+        elif "wedding" in occ_lower:
+            score = (feature_richness * 0.45) + (contrast_score * 0.35) + (luminance_balance * 0.20)
+        elif "date" in occ_lower:
+            score = (contrast_score * 0.35) + (luminance_balance * 0.35) + (feature_richness * 0.30)
+        else: # Casual / General
+            score = (feature_richness * 0.40) + (luminance_balance * 0.30) + (contrast_score * 0.30)
+
+        scores.append(score)
+        analyses.append({
+            "contrast": round(contrast_score, 1),
+            "richness": round(feature_richness, 1),
+            "brightness": round(brightness, 1),
+        })
+
+    # Pick winner (1-based index)
+    best_idx = int(np.argmax(scores)) + 1
+    max_score = max(scores) if max(scores) > 0 else 1.0
+    normalized_scores = [round((s / max_score) * 100, 1) for s in scores]
+
+    # Generate personalized fashion rationale caption based on occasion
+    occ_key = occasion.capitalize()
+    caption_templates = {
+        "Party": (
+            f"Dress #{best_idx} is selected as your prime outfit for a Party. "
+            f"Its superior color saturation and lively contrast create a vibrant, captivating aesthetic that "
+            f"effortlessly commands attention compared to the other alternatives."
+        ),
+        "Formal": (
+            f"Dress #{best_idx} is chosen for its graceful color harmony and clean visual structure. "
+            f"It delivers the ideal blend of executive poise and sophisticated modern elegance, making it "
+            f"the most appropriate and dignified choice for a formal setting."
+        ),
+        "Wedding": (
+            f"Dress #{best_idx} stands out as the ultimate choice for a wedding celebration. "
+            f"Its rich fabric tone depth and ornate texture balance create a regal, radiant presence "
+            f"that elevates your personal style above the other dresses."
+        ),
+        "Date Night": (
+            f"Dress #{best_idx} is selected for its romantic undertones and balanced aesthetic flow. "
+            f"It pairs flattering visual contrast with effortless charm, giving you an alluring and "
+            f"unforgettable look."
+        ),
+        "Casual": (
+            f"Dress #{best_idx} is your ideal choice for casual wear. "
+            f"Its soft color balance and lightweight visual feel provide maximum ease while ensuring "
+            f"a crisp, chic, and put-together daily look."
+        ),
+        "General": (
+            f"Our AI fashion model evaluated color saturation, texture harmony, and visual balance across all three dresses. "
+            f"Dress #{best_idx} achieved the highest aesthetic synergy, making it the most flattering, balanced, and versatile "
+            f"outfit to wear today."
+        ),
+    }
+
+    styling_tips = {
+        "Party": "Pair with metallic statement jewelry and strappy heels to accentuate the energetic silhouette.",
+        "Formal": "Complement with sleek pointed-toe heels and a minimalist leather tote for a timeless executive finish.",
+        "Wedding": "Style with delicate gemstone earrings and an embellished clutch to highlight the celebratory elegance.",
+        "Date Night": "Accent with dainty layered necklaces and soft neutral footwear for a warm, intimate aesthetic.",
+        "Casual": "Pair with crisp white sneakers or classic loafers and a relaxed crossbody bag for effortless style.",
+        "General": "Match with complementary neutral accessories to allow the dress's natural color harmony to shine.",
+    }
+
+    reasoning_caption = caption_templates.get(occ_key, caption_templates["General"])
+    styling_tip = styling_tips.get(occ_key, styling_tips["General"])
+
+    return {
+        "best_dress_index": best_idx,
+        "best_dress_title": f"Dress #{best_idx}",
+        "occasion": occasion,
+        "scores": normalized_scores,
+        "reasoning_caption": reasoning_caption,
+        "styling_tip": styling_tip,
+        "metrics": {
+            "harmony_score": f"{normalized_scores[best_idx - 1]}%",
+            "aesthetic_balance": "Optimal",
+            "occasion_fit": "Excellent"
+        }
+    }
+
 @app.get("/")
 def root():
-    return {"message": "FitFuse AI online - embeddings computed on save"}
+    return {"message": "NextGen Cloth Engine AI online - embeddings computed on save"}

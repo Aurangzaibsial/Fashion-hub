@@ -48,9 +48,10 @@ class _MyReelsState extends State<MyReels> {
                     colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
                   ).createShader(bounds),
                   child: Text(
-                    "Fabric Fusion",
+                    "NextGen Cloth Engine",
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.lemon(
-                      fontSize: screenWidth * 0.12,
+                      fontSize: screenWidth * 0.075,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),

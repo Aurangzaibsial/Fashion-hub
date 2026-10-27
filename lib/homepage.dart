@@ -6,6 +6,9 @@ import 'package:flutter/gestures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:fitfuseapp/profilepage.dart';
+import 'package:fitfuseapp/wardrobe.dart';
+import 'package:fitfuseapp/ai_outfit_matcher.dart';
 import 'dart:convert';
 
 class MyHome extends StatefulWidget {
@@ -145,9 +148,9 @@ class _MyHomeState extends State<MyHome> {
         title: _isSearching
             ? _buildSearchField()
             : Text(
-                'Fabric Fusion',
+                'NextGen Cloth Engine',
                 style: GoogleFonts.lemon(
-                  fontSize: 22,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -165,6 +168,72 @@ class _MyHomeState extends State<MyHome> {
           children: [
             const SizedBox(height: 16),
             _buildCarouselSlider(),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AIOutfitMatcherScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C3DE8).withOpacity(0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Can't Decide What to Wear?",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "Compare 3 dresses & let AI pick the best!",
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -201,9 +270,10 @@ class _MyHomeState extends State<MyHome> {
             ),
             child: Center(
               child: Text(
-                'Fabric Fusion',
+                'NextGen Cloth Engine',
+                textAlign: TextAlign.center,
                 style: GoogleFonts.lemon(
-                    fontSize: 26,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.white),
               ),
@@ -213,6 +283,42 @@ class _MyHomeState extends State<MyHome> {
             leading: const Icon(Icons.home, color: Color(0xFF6C3DE8)),
             title: const Text('Home'),
             onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome, color: Color(0xFFE040AB)),
+            title: const Text('AI 3-Dress Matcher'),
+            subtitle: const Text('Let AI pick your best outfit'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AIOutfitMatcherScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.checkroom, color: Color(0xFF6C3DE8)),
+            title: const Text('Wardrobe'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MyWardrobe()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person, color: Color(0xFF6C3DE8)),
+            title: const Text('Profile'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              );
+            },
           ),
         ],
       ),

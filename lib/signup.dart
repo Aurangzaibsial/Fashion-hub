@@ -157,6 +157,8 @@ class _SignupState extends State<Signup> {
         'phoneNumber': _phoneController.text.trim(),
         'email': _emailController.text.trim(),
         'profilePicURL': '',
+        'role': 'user',
+        'isBlocked': false,
         'followers': [],
         'following': [],
         'createdAt': Timestamp.now(),
@@ -309,7 +311,7 @@ class _SignupState extends State<Signup> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Join Fabric Fusion today',
+                            'Join NextGen Cloth Engine today',
                             style: GoogleFonts.poppins(
                               fontSize: 13,
                               color: Colors.white.withOpacity(0.7),

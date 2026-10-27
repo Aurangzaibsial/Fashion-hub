@@ -178,6 +178,20 @@ class _MyWardrobeState extends State<MyWardrobe>
                     (selectedImageFile != null || selectedImageBytes != null)) {
                   setStateDialog(() => isUploading = true);
 
+                  // 1. AI Safety & Wardrobe Validation Check
+                  final valResult = await _validateImageWithAI(
+                    imageFile: selectedImageFile,
+                    imageBytes: selectedImageBytes,
+                    action: "wardrobe_add_${selectedCategory?.toLowerCase() ?? 'item'}",
+                  );
+
+                  if (valResult['valid'] == false) {
+                    setStateDialog(() => isUploading = false);
+                    _showSecurityAlertModal(context, valResult['detail']);
+                    return;
+                  }
+
+                  // 2. Upload to Cloudinary
                   final imageUrl = await uploadImageToCloudinary(
                     imageFile: selectedImageFile,
                     imageBytes: selectedImageBytes,
@@ -223,20 +237,27 @@ class _MyWardrobeState extends State<MyWardrobe>
   }
 
   void _showEditItemDialog(String docId, Map<String, dynamic> data) {
-    final nameController = TextEditingController(text: data['name']);
-    String? selectedCategory = data['category'];
-    String? selectedOccasion = data['occasion'];
+    final nameController = TextEditingController(text: data['name']?.toString() ?? '');
+    String? selectedCategory = data['category']?.toString();
+    String? selectedOccasion = data['occasion']?.toString();
+
+    File? newImageFile;
+    Uint8List? newImageBytes;
+    bool isUploading = false;
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setStateDialog) => AlertDialog(
           title: const Text('Edit Item'),
           content: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  value: ['Tops', 'Bottoms', 'Dresses', 'Shoes', 'Accessories'].contains(selectedCategory)
+                      ? selectedCategory
+                      : null,
                   items: ['Tops', 'Bottoms', 'Dresses', 'Shoes', 'Accessories']
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
@@ -253,7 +274,9 @@ class _MyWardrobeState extends State<MyWardrobe>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedOccasion,
+                  value: ['All', 'Weddings', 'Casual', 'Work', 'Daily Wear', 'Parties'].contains(selectedOccasion)
+                      ? selectedOccasion
+                      : null,
                   items: [
                     'All',
                     'Weddings',
@@ -269,22 +292,128 @@ class _MyWardrobeState extends State<MyWardrobe>
                       border: OutlineInputBorder(),
                       hintText: 'Select an Occasion'),
                 ),
+                const SizedBox(height: 14),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C3DE8),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                  icon: const Icon(Icons.photo_library, size: 18),
+                  label: Text(
+                    (newImageBytes != null || newImageFile != null)
+                        ? 'Image Selected (Change Again)'
+                        : 'Replace Image',
+                  ),
+                  onPressed: () async {
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(source: ImageSource.gallery);
+                    if (picked != null) {
+                      if (kIsWeb) {
+                        newImageBytes = await picked.readAsBytes();
+                      } else {
+                        newImageFile = File(picked.path);
+                      }
+                      setStateDialog(() {});
+                    }
+                  },
+                ),
+                if (newImageBytes != null) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(newImageBytes!, height: 100, fit: BoxFit.cover),
+                  ),
+                ] else if (newImageFile != null) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(newImageFile!, height: 100, fit: BoxFit.cover),
+                  ),
+                ],
+                if (isUploading) ...[
+                  const SizedBox(height: 12),
+                  const Center(child: CircularProgressIndicator()),
+                ],
               ],
             ),
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel')),
+              onPressed: isUploading ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
-              onPressed: () async {
-                await _wardrobeCollection.doc(docId).update({
-                  'name': nameController.text,
-                  'category': selectedCategory,
-                  'occasion': selectedOccasion,
-                });
-                Navigator.pop(context);
-              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C3DE8),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      setStateDialog(() => isUploading = true);
+
+                      String? finalImageUrl = data['imageUrl'];
+
+                      if (newImageFile != null || newImageBytes != null) {
+                        // AI Safety Validation
+                        final valResult = await _validateImageWithAI(
+                          imageFile: newImageFile,
+                          imageBytes: newImageBytes,
+                          action: "wardrobe_edit_${selectedCategory?.toLowerCase() ?? 'item'}",
+                        );
+
+                        if (valResult['valid'] == false) {
+                          setStateDialog(() => isUploading = false);
+                          _showSecurityAlertModal(context, valResult['detail']);
+                          return;
+                        }
+
+                        // Upload to Cloudinary
+                        final uploadedUrl = await uploadImageToCloudinary(
+                          imageFile: newImageFile,
+                          imageBytes: newImageBytes,
+                        );
+
+                        if (uploadedUrl != null) {
+                          finalImageUrl = uploadedUrl;
+                        }
+                      }
+
+                      await _wardrobeCollection.doc(docId).update({
+                        'name': nameController.text.trim(),
+                        'category': selectedCategory,
+                        'occasion': selectedOccasion,
+                        if (finalImageUrl != null) 'imageUrl': finalImageUrl,
+                      });
+
+                      if (finalImageUrl != null && finalImageUrl != data['imageUrl']) {
+                        try {
+                          final embedUri = Uri.parse("http://127.0.0.1:8000/embed-item");
+                          await http.post(
+                            embedUri,
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'userId': _userId,
+                              'imageUrl': finalImageUrl,
+                              'title': nameController.text.trim(),
+                              'category': selectedCategory,
+                              'occasion': selectedOccasion ?? 'All',
+                            }),
+                          );
+                        } catch (_) {}
+                      }
+
+                      setStateDialog(() => isUploading = false);
+                      Navigator.pop(dialogCtx);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Item updated successfully!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
               child: const Text('Save'),
             ),
           ],
@@ -663,6 +792,7 @@ class _MyWardrobeState extends State<MyWardrobe>
   void _showRecommendationDialog(BuildContext context) {
     bool loading = false;
     Map<String, dynamic>? outfit;
+    String? securityError;
     String selectedWeather = 'Sunny';
     bool fetchedWeather = false;
 
@@ -743,14 +873,38 @@ class _MyWardrobeState extends State<MyWardrobe>
                         final picked =
                             await picker.pickImage(source: ImageSource.gallery);
                         if (picked != null) {
-                          setStateDialog(() => loading = true);
+                          setStateDialog(() {
+                            loading = true;
+                            securityError = null;
+                            outfit = null;
+                          });
                           final result = await _getSmartRecommendations(
                             picked,
                             selectedWeather,
                           );
                           setStateDialog(() {
-                            outfit = result;
                             loading = false;
+                            if (result != null && result['status'] == 'success') {
+                              securityError = null;
+                              outfit = result['recommended_outfit'] as Map<String, dynamic>;
+                            } else if (result != null && result['status'] == 'unauthorized') {
+                              outfit = null;
+                              final d = result['detail'];
+                              if (d is Map && d['message'] != null) {
+                                securityError = d['message'].toString();
+                              } else if (d is String) {
+                                securityError = d;
+                              } else {
+                                securityError = "Unauthorized image detected. Prohibited items cannot be processed.";
+                              }
+                              _showSecurityAlertModal(context, result['detail']);
+                            } else {
+                              outfit = null;
+                              securityError = null;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Failed to get recommendation. Please try again.")),
+                              );
+                            }
                           });
                         }
                       },
@@ -758,6 +912,43 @@ class _MyWardrobeState extends State<MyWardrobe>
                   ),
                   const SizedBox(height: 12),
                   if (loading) const Center(child: CircularProgressIndicator()),
+                  if (securityError != null) ...[
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red.shade300, width: 1.2),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.gpp_bad_rounded, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                "Security Violation Blocked",
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            securityError!,
+                            style: const TextStyle(color: Colors.black87, fontSize: 12, height: 1.3),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            "⚠️ Violation logged in Admin Security Alerts.",
+                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (outfit != null) ...[
                     const Divider(),
                     ...outfit!.entries.map((entry) {
@@ -804,6 +995,113 @@ class _MyWardrobeState extends State<MyWardrobe>
     );
   }
 
+  void _showSecurityAlertModal(BuildContext ctx, dynamic detail) {
+    String message = "The selected image is not permitted. Weapons, violence, and non-wardrobe objects are strictly forbidden.";
+    if (detail is Map && detail['message'] != null) {
+      message = detail['message'].toString();
+    } else if (detail is String) {
+      message = detail;
+    }
+
+    showDialog(
+      context: ctx,
+      builder: (alertCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.gpp_bad_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Text(
+              "Security Alert",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.admin_panel_settings, color: Colors.red, size: 22),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "This violation has been logged and sent to the Admin Dashboard for security moderation.",
+                      style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(alertCtx),
+            child: const Text("Understood", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> _validateImageWithAI({
+    File? imageFile,
+    Uint8List? imageBytes,
+    String action = "wardrobe_upload",
+  }) async {
+    try {
+      final uri = Uri.parse(
+          "http://127.0.0.1:8000/validate-image?userId=$_userId&action=${Uri.encodeComponent(action)}");
+      final request = http.MultipartRequest('POST', uri);
+
+      if (kIsWeb || imageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'file',
+          imageBytes!,
+          filename: 'upload.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        ));
+      } else if (imageFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          imageFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ));
+      }
+
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+      final data = json.decode(body);
+
+      if (response.statusCode == 200) {
+        return {'valid': true, 'data': data};
+      } else {
+        return {'valid': false, 'detail': data['detail']};
+      }
+    } catch (e) {
+      debugPrint("Validation request error (backend may be offline): $e");
+      return {'valid': true}; // fallback gracefully if server not reachable
+    }
+  }
+
   Future<Map<String, dynamic>?> _getSmartRecommendations(
       XFile pickedFile, String weather) async {
     try {
@@ -828,10 +1126,19 @@ class _MyWardrobeState extends State<MyWardrobe>
       }
 
       final response = await request.send();
+      final body = await response.stream.bytesToString();
+      final data = json.decode(body) as Map<String, dynamic>;
+
       if (response.statusCode == 200) {
-        final body = await response.stream.bytesToString();
-        final data = json.decode(body) as Map<String, dynamic>;
-        return data['recommended_outfit'] as Map<String, dynamic>;
+        return {
+          'status': 'success',
+          'recommended_outfit': data['recommended_outfit'] as Map<String, dynamic>,
+        };
+      } else if (response.statusCode == 400 && data['detail'] != null) {
+        return {
+          'status': 'unauthorized',
+          'detail': data['detail'],
+        };
       }
     } catch (e) {
       debugPrint("AI API Exception: $e");
