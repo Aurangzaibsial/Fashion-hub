@@ -221,10 +221,9 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
 
     # ImageNet has no class for many garments (dress shoes, hoodies...). When it sees no
     # clothing, ask CLIP: a high "clothing / footwear / accessory" score also counts.
-    if not looks_like_clothing:
-        clip_res = clip_helper.analyze(img)
-        if clip_res is not None and clip_res["clothing"] >= 0.6:
-            looks_like_clothing = True
+    clip_res = clip_helper.analyze(img) if (mode != "safety" or not looks_like_clothing) else None
+    if not looks_like_clothing and clip_res is not None and clip_res["clothing"] >= 0.6:
+        looks_like_clothing = True
 
     # 2. Weapons / blades / dangerous objects (always enforced)
     detected_weapons = []
@@ -287,6 +286,21 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
             "message": "Image passed safety checks.",
             "detected_items": [top_class_name],
             "confidence": round(top_class_prob, 2)
+        }
+
+    # A portrait (photo, painting or banner of a person) is not a wardrobe item, even though
+    # ImageNet reads the person's clothes as "jersey" / "suit". Real wardrobe photos score
+    # face < 0.31 and clothing >= 0.18; portraits score face >= 0.65 and clothing <= 0.12.
+    if clip_res is not None and clip_res["face"] >= 0.5 and clip_res["clothing"] < 0.3:
+        return {
+            "is_valid": False,
+            "violation_type": "NON_WARDROBE_ITEM",
+            "message": (
+                "Unauthorized image: This looks like a portrait of a person, not a clothing item. "
+                "Only authentic clothing, footwear, and fashion accessories are accepted."
+            ),
+            "detected_items": ["portrait / face"],
+            "confidence": round(clip_res["face"], 2)
         }
 
     # 5. Wardrobe mode: the image must look like clothing, footwear or an accessory.

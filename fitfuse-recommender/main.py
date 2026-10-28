@@ -308,6 +308,7 @@ def re_embed_all(userId: str = Query(...)):
         except Exception as e:
             print(f"Error re-embedding {image_url}: {e}")
 
+    embeddings_cache.pop(userId, None)
     return {
         "status": "success",
         "message": f"Successfully re-embedded {re_embedded_count} items from wardrobe.",

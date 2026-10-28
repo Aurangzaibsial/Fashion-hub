@@ -26,6 +26,7 @@ NON_CLOTHING_PROMPTS = [
 ]
 _CATEGORIES = list(CATEGORY_PROMPTS)
 _TEXTS = list(CATEGORY_PROMPTS.values()) + NON_CLOTHING_PROMPTS
+_FACE_INDEX = _TEXTS.index("a photo of a person's face")
 
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 _model = _processor = None
@@ -56,6 +57,7 @@ def analyze(img: Image.Image):
         total = float(cat_probs.sum())
         return {
             "clothing": total,
+            "face": float(probs[_FACE_INDEX]),
             "categories": {c: float(cat_probs[i]) / max(total, 1e-9) for i, c in enumerate(_CATEGORIES)},
         }
     except Exception as e:
