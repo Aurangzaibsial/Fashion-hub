@@ -842,7 +842,6 @@ class _MyWardrobeState extends State<MyWardrobe>
   void _showRecommendationDialog(BuildContext context) {
     bool loading = false;
     Map<String, dynamic>? outfit;
-    String? securityError;
     String selectedWeather = 'Sunny';
     bool fetchedWeather = false;
 
@@ -925,80 +924,32 @@ class _MyWardrobeState extends State<MyWardrobe>
                         if (picked != null) {
                           setStateDialog(() {
                             loading = true;
-                            securityError = null;
                             outfit = null;
                           });
                           final result = await _getSmartRecommendations(
                             picked,
                             selectedWeather,
                           );
+                          if (!context.mounted) return;
                           setStateDialog(() {
                             loading = false;
-                            if (result != null && result['status'] == 'success') {
-                              securityError = null;
-                              outfit = result['recommended_outfit'] as Map<String, dynamic>;
-                            } else if (result != null && result['status'] == 'unauthorized') {
-                              outfit = null;
-                              final d = result['detail'];
-                              if (d is Map && d['message'] != null) {
-                                securityError = d['message'].toString();
-                              } else if (d is String) {
-                                securityError = d;
-                              } else {
-                                securityError = "Unauthorized image detected. Prohibited items cannot be processed.";
-                              }
-                              _showSecurityAlertModal(context, result['detail']);
-                            } else {
-                              outfit = null;
-                              securityError = null;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Failed to get recommendation. Please try again.")),
-                              );
-                            }
+                            outfit = result != null && result['status'] == 'success'
+                                ? result['recommended_outfit'] as Map<String, dynamic>
+                                : null;
                           });
+                          if (result != null && result['status'] == 'unauthorized') {
+                            _showSecurityAlertModal(context, result['detail']);
+                          } else if (result == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Failed to get recommendation. Please try again.")),
+                            );
+                          }
                         }
                       },
                     ),
                   ),
                   const SizedBox(height: 12),
                   if (loading) const Center(child: CircularProgressIndicator()),
-                  if (securityError != null) ...[
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.shade300, width: 1.2),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.gpp_bad_rounded, color: Colors.red, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                "Security Violation Blocked",
-                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            securityError!,
-                            style: const TextStyle(color: Colors.black87, fontSize: 12, height: 1.3),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            "⚠️ Violation logged in Admin Security Alerts.",
-                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                   if (outfit != null) ...[
                     const Divider(),
                     ...outfit!.entries.map((entry) {
