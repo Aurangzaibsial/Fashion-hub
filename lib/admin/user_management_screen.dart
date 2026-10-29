@@ -1,3 +1,5 @@
+import 'package:fitfuseapp/img_url.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fitfuseapp/hover_tap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -142,7 +144,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             radius: 24,
                             backgroundColor: const Color(0xFF121A33).withOpacity(0.1),
                             backgroundImage: profileImage.startsWith('http')
-                                ? NetworkImage(profileImage)
+                                ? CachedNetworkImageProvider(thumb(profileImage, 200))
                                 : null,
                             child: profileImage.isEmpty || !profileImage.startsWith('http')
                                 ? Text(

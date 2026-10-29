@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fitfuseapp/img_url.dart';
 // ignore_for_file: unnecessary_cast
 
 import 'package:fitfuseapp/hover_tap.dart';
@@ -81,7 +83,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _updateProfileImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
     if (picked != null && _currentUser != null) {
       try {
         final verdict = await checkImage(
@@ -431,7 +433,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         radius: 62,
                         backgroundColor: Colors.grey,
                         backgroundImage: profileImage.isNotEmpty
-                            ? NetworkImage(profileImage)
+                            ? CachedNetworkImageProvider(thumb(profileImage, 200))
                             : null,
                         child: profileImage.isEmpty
                             ? const Icon(Icons.person, size: 63)
@@ -687,7 +689,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ListTile(
                 leading: CircleAvatar(
                   backgroundImage: profileImage.startsWith("http")
-                      ? NetworkImage(profileImage)
+                      ? CachedNetworkImageProvider(thumb(profileImage, 200))
                       : AssetImage(profileImage) as ImageProvider,
                 ),
                 title: Text(fullName,
@@ -713,7 +715,7 @@ class _ProfilePageState extends State<ProfilePage> {
               if (postImage.isNotEmpty)
                 HoverTap(lift: false,
                   onTap: () => _openFullImage(postImage),
-                  child: Image.network(postImage,
+                  child: Image.network(thumb(postImage, 900),
                       fit: BoxFit.cover, width: double.infinity, height: 200),
                 ),
               Padding(
@@ -921,7 +923,7 @@ class UserListPage extends StatelessWidget {
               return ListTile(
                 leading: CircleAvatar(
                   backgroundImage: profileImage.startsWith('http')
-                      ? NetworkImage(profileImage)
+                      ? CachedNetworkImageProvider(thumb(profileImage, 200))
                       : AssetImage(profileImage) as ImageProvider,
                 ),
                 title: Text(fullName.isNotEmpty ? fullName : "Anonymous"),

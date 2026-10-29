@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/img_url.dart';
 import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,7 +25,11 @@ class MyHome extends StatefulWidget {
 class _MyHomeState extends State<MyHome> {
   bool _isSearching = false;
   final CarouselSliderController _carousel = CarouselSliderController();
-  int _page = 0;
+  // Current featured/carousel page. Held in a notifier so paging rebuilds only
+  // the header dots and the featured card, not the whole Home page.
+  final ValueNotifier<int> _pageN = ValueNotifier<int>(0);
+  int get _page => _pageN.value;
+  set _page(int v) => _pageN.value = v;
   bool _isWide = false;
   String? _weather;
   String? _firstName;
@@ -41,8 +46,9 @@ class _MyHomeState extends State<MyHome> {
       if (mounted) setState(() => _page = 0);
     });
     _auto = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (mounted && _isWide && _visible.length > 1) {
-        setState(() => _page = (_page + 1) % _visible.length);
+      // TickerMode is off while Home sits in the background on another tab.
+      if (mounted && _isWide && TickerMode.valuesOf(context).enabled && _visible.length > 1) {
+        _page = (_page + 1) % _visible.length;
       }
     });
   }
@@ -51,6 +57,7 @@ class _MyHomeState extends State<MyHome> {
   void dispose() {
     _auto?.cancel();
     _searchController.dispose();
+    _pageN.dispose();
     super.dispose();
   }
 
@@ -80,13 +87,42 @@ class _MyHomeState extends State<MyHome> {
     return 'Good evening';
   }
 
+  // Filtered list is cached until the recommendations or the query change.
+  List<Map<String, dynamic>>? _visSrc;
+  String _visQuery = '';
+  List<Map<String, dynamic>> _visCache = const [];
+
   List<Map<String, dynamic>> get _visible {
     final q = _searchController.text.trim().toLowerCase();
-    if (q.isEmpty) return recommendations;
-    return recommendations
-        .where((o) =>
-            '${o['title'] ?? ''} ${o['description'] ?? ''}'.toLowerCase().contains(q))
-        .toList();
+    if (identical(_visSrc, recommendations) && q == _visQuery) return _visCache;
+    final result = q.isEmpty
+        ? recommendations
+        : recommendations
+            .where((o) =>
+                '${o['title'] ?? ''} ${o['description'] ?? ''}'.toLowerCase().contains(q))
+            .toList();
+    _visSrc = recommendations;
+    _visQuery = q;
+    return _visCache = result;
+  }
+
+  // Weather rarely changes within minutes, so reuse the last reading instead
+  // of repeating the location + weather lookups on every Home load.
+  static String? _cachedWeather;
+  static DateTime? _cachedWeatherAt;
+
+  Future<String> _currentWeather() async {
+    final at = _cachedWeatherAt;
+    if (_cachedWeather != null &&
+        at != null &&
+        DateTime.now().difference(at) < const Duration(minutes: 15)) {
+      return _cachedWeather!;
+    }
+    final position = await _getLocation();
+    final weather = await _getWeather(position.latitude, position.longitude);
+    _cachedWeather = weather;
+    _cachedWeatherAt = DateTime.now();
+    return weather;
   }
 
   Future<void> _fetchRecommendations() async {
@@ -94,8 +130,7 @@ class _MyHomeState extends State<MyHome> {
       final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
       if (userId.isEmpty) throw Exception("No user logged in");
       
-      final position = await _getLocation();
-      final weather = await _getWeather(position.latitude, position.longitude);
+      final weather = await _currentWeather();
       if (mounted) setState(() => _weather = weather);
 
       final response = await http.get(Uri.parse(
@@ -300,18 +335,26 @@ class _MyHomeState extends State<MyHome> {
                         fontSize: 16, color: const Color(0xFF5B6177)),
                   ),
                   const SizedBox(height: 28),
-                  _sectionHeader(
-                    "Today's picks",
-                    count: n,
-                    onPrev: wide
-                        ? () => setState(() => _page = (_page - 1) % n)
-                        : () => _carousel.previousPage(),
-                    onNext: wide
-                        ? () => setState(() => _page = (_page + 1) % n)
-                        : () => _carousel.nextPage(),
+                  ValueListenableBuilder<int>(
+                    valueListenable: _pageN,
+                    builder: (context, _, __) => _sectionHeader(
+                      "Today's picks",
+                      count: n,
+                      onPrev: wide
+                          ? () => _page = (_page - 1) % n
+                          : () => _carousel.previousPage(),
+                      onNext: wide
+                          ? () => _page = (_page + 1) % n
+                          : () => _carousel.nextPage(),
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  wide ? _buildFeaturedWide() : _buildCarouselSlider(false),
+                  wide
+                      ? ValueListenableBuilder<int>(
+                          valueListenable: _pageN,
+                          builder: (context, _, __) => _buildFeaturedWide(),
+                        )
+                      : _buildCarouselSlider(false),
                   const SizedBox(height: 28),
                   HoverTap(
                     onTap: () {
@@ -656,7 +699,7 @@ class _MyHomeState extends State<MyHome> {
           Expanded(
             child: SizedBox.expand(
               child: CachedNetworkImage(
-                imageUrl: outfit['image'] ?? '',
+                imageUrl: thumb(outfit['image'] ?? '', 800),
                 fit: BoxFit.cover,
                 placeholder: (c, u) => Container(color: const Color(0xFFF3E3DD)),
                 errorWidget: (c, u, e) => Container(
@@ -697,7 +740,7 @@ class _MyHomeState extends State<MyHome> {
                   width: 96,
                   height: 96,
                   child: CachedNetworkImage(
-                    imageUrl: outfit['image'] ?? '',
+                    imageUrl: thumb(outfit['image'] ?? '', 300),
                     fit: BoxFit.cover,
                     placeholder: (c, u) =>
                         Container(color: const Color(0xFFF3E3DD)),
@@ -881,7 +924,7 @@ class _MyHomeState extends State<MyHome> {
               fit: StackFit.expand,
               children: [
                 CachedNetworkImage(
-                  imageUrl: outfit['image'] ?? '',
+                  imageUrl: thumb(outfit['image'] ?? '', 800),
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                       color: const Color(0xFFF3E3DD),
@@ -946,11 +989,11 @@ class _MyHomeState extends State<MyHome> {
         viewportFraction: wide ? 0.34 : 0.82,
         padEnds: false,
         enlargeCenterPage: false,
-        autoPlay: true,
+        autoPlay: TickerMode.valuesOf(context).enabled,
         autoPlayInterval: const Duration(seconds: 6),
         autoPlayAnimationDuration: const Duration(milliseconds: 1200),
         autoPlayCurve: Curves.easeInOutCubic,
-        onPageChanged: (index, reason) => setState(() => _page = index),
+        onPageChanged: (index, reason) => _page = index,
       ),
     );
   }
@@ -1001,7 +1044,7 @@ class _MyHomeState extends State<MyHome> {
                       AspectRatio(
                         aspectRatio: 16 / 10,
                         child: CachedNetworkImage(
-                          imageUrl: outfit['image'] ?? '',
+                          imageUrl: thumb(outfit['image'] ?? '', 800),
                           width: double.infinity,
                           fit: BoxFit.cover,
                           placeholder: (c, u) =>
@@ -1149,7 +1192,7 @@ class OutfitDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CachedNetworkImage(
-              imageUrl: outfit['image'] ?? '',
+              imageUrl: thumb(outfit['image'] ?? '', 900),
               fit: BoxFit.cover,
               width: double.infinity,
             ),

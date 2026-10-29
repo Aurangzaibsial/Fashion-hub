@@ -1,3 +1,5 @@
+import 'package:fitfuseapp/img_url.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,9 +35,28 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
     );
   }
 
+  // Tabs already opened stay alive so switching back is instant and does not
+  // reload their data. Tabs never opened are not built.
+  final Set<int> _visited = {0};
+
+  Widget _pageStack() {
+    return IndexedStack(
+      index: selectedIndex,
+      children: [
+        for (var i = 0; i < pages.length; i++)
+          // IndexedStack keeps hidden tabs ticking, so pause them explicitly.
+          TickerMode(
+            enabled: i == selectedIndex,
+            child: _visited.contains(i) ? pages[i] : const SizedBox.shrink(),
+          ),
+      ],
+    );
+  }
+
   void onItemTapped(int index) {
     setState(() {
       selectedIndex = index;
+      _visited.add(index);
       _controller.forward().then((_) {
         _controller.reverse();
       });
@@ -172,7 +193,7 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: const Color(0xFFF3E3DD),
-                  backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null,
+                  backgroundImage: photo.startsWith('http') ? CachedNetworkImageProvider(thumb(photo, 200)) : null,
                   child: photo.startsWith('http')
                       ? null
                       : Text(initials,
@@ -255,13 +276,13 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
         body: Row(
           children: [
             _buildSidebar(),
-            Expanded(child: pages[selectedIndex]),
+            Expanded(child: _pageStack()),
           ],
         ),
       );
     }
     return Scaffold(
-      body: pages[selectedIndex],
+      body: _pageStack(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

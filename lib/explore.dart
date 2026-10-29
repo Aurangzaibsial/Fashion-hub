@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/img_url.dart';
 import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -75,12 +76,18 @@ class _ExplorePageState extends State<ExplorePage> {
   }
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final wide = screenW >= 900;
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
+        // This tab is not a pushed page, so it should not show a back arrow.
+        automaticallyImplyLeading: false,
         centerTitle: true,
-        title: const Text("Fashion Trends", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        flexibleSpace: Container(
+        title: Text("Fashion Trends", style: TextStyle(color: wide ? const Color(0xFF0E1220) : Colors.white, fontWeight: FontWeight.bold)),
+        flexibleSpace: wide
+            ? null
+            : Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
@@ -89,12 +96,16 @@ class _ExplorePageState extends State<ExplorePage> {
             ),
           ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: wide ? Colors.white : Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        shape: wide
+            ? const Border(bottom: BorderSide(color: Color(0xFFE7E4EC)))
+            : null,
         actions: [
           IconButton(
             tooltip: "AI 3-Dress Matcher",
-            icon: const Icon(Icons.auto_awesome, color: Colors.white),
+            icon: Icon(Icons.auto_awesome, color: wide ? const Color(0xFF121A33) : Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -112,7 +123,11 @@ class _ExplorePageState extends State<ExplorePage> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.symmetric(
+              horizontal: wide
+                  ? ((screenW - 264 - 900) / 2).clamp(12.0, 2000.0).toDouble()
+                  : 12.0,
+              vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -145,7 +160,7 @@ class _ExplorePageState extends State<ExplorePage> {
               // Search bar with debounced input.
               Center(
                 child: Container(
-                  width: MediaQuery.of(context).size.width * 0.9,
+                  width: wide ? double.infinity : screenW * 0.9,
                   height: 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -374,12 +389,12 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
               },
               child: ClipRRect(
                 child: CachedNetworkImage(
-                  imageUrl: postImage,
+                  imageUrl: thumb(postImage, 900),
                   width: double.infinity,
-                  height: MediaQuery.of(context).size.width * 0.8,
+                  height: (MediaQuery.of(context).size.width * 0.8).clamp(0.0, 440.0).toDouble(),
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    height: MediaQuery.of(context).size.width * 0.8,
+                    height: (MediaQuery.of(context).size.width * 0.8).clamp(0.0, 440.0).toDouble(),
                     color: Colors.grey.shade100,
                     child: const Center(child: CircularProgressIndicator()),
                   ),
@@ -555,7 +570,7 @@ class _CreateTrendingPostPageState extends State<CreateTrendingPostPage> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
     if (picked != null) {
       final verdict = await checkImage(
         bytes: await picked.readAsBytes(),

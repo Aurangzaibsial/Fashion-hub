@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fitfuseapp/img_url.dart';
 // ignore_for_file: unnecessary_cast
 
 import 'package:fitfuseapp/hover_tap.dart';
@@ -21,6 +23,14 @@ const Color accentColor = Colors.white;
 
 class UserCache {
   static final Map<String, String> profileImageCache = {};
+}
+
+/// Centers the feed at a readable width next to the sidebar on wide screens.
+EdgeInsets _feedPadding(BuildContext context) {
+  final w = MediaQuery.of(context).size.width;
+  if (w < 900) return EdgeInsets.zero;
+  return EdgeInsets.symmetric(
+      horizontal: ((w - 264 - 720) / 2).clamp(0.0, 2000.0).toDouble());
 }
 
 class CommunityPage extends StatefulWidget {
@@ -67,13 +77,16 @@ class _CommunityPageState extends State<CommunityPage> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = MediaQuery.of(context).size.width >= 900;
     return Stack(
       children: [
         Scaffold(
           backgroundColor: const Color(0xFFFAF9F7),
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            flexibleSpace: Container(
+            flexibleSpace: wide
+                ? null
+                : Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
@@ -82,7 +95,8 @@ class _CommunityPageState extends State<CommunityPage> {
                 ),
               ),
             ),
-            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            backgroundColor: wide ? Colors.white : Colors.transparent,
             elevation: 0,
             leading: FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
@@ -111,7 +125,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     ),
                     child: CircleAvatar(
                       backgroundImage: profileImage.isNotEmpty
-                          ? NetworkImage(profileImage)
+                          ? CachedNetworkImageProvider(thumb(profileImage, 200))
                           : const AssetImage('assets/images/man.jpg')
                               as ImageProvider,
                     ),
@@ -238,7 +252,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundImage: profileImage.startsWith('http')
-                            ? NetworkImage(profileImage)
+                            ? CachedNetworkImageProvider(thumb(profileImage, 200))
                             : AssetImage(profileImage) as ImageProvider,
                       ),
                       title: Text(username),
@@ -345,6 +359,7 @@ class _PostListState extends State<PostList> {
     return RefreshIndicator(
       onRefresh: _refreshPosts,
       child: ListView.builder(
+        padding: _feedPadding(context),
         controller: _scrollController,
         shrinkWrap: true,
         itemCount: _posts.length + 1,
@@ -475,6 +490,7 @@ class _FollowingPostListState extends State<FollowingPostList> {
     return RefreshIndicator(
       onRefresh: _refreshPosts,
       child: ListView.builder(
+        padding: _feedPadding(context),
         controller: _scrollController,
         itemCount: _posts.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
@@ -675,6 +691,11 @@ class _PostCardState extends State<PostCard> {
                         fontWeight: FontWeight.bold, color: Colors.black),
                   );
                 }
+                if (snapshot.connectionState == ConnectionState.done) {
+                  return const Text('Anonymous',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.black));
+                }
                 return const Text('Loading...',
                     style: TextStyle(
                         fontWeight: FontWeight.bold, color: Colors.black));
@@ -780,7 +801,7 @@ class _FacebookPostImageState extends State<FacebookPostImage> {
 
   void _resolveImage() {
     _removeListener();
-    final provider = NetworkImage(widget.imageUrl);
+    final provider = NetworkImage(thumb(widget.imageUrl, 900));
     _stream = provider.resolve(const ImageConfiguration());
     _listener = ImageStreamListener((info, _) {
       final width = info.image.width.toDouble();
@@ -813,7 +834,7 @@ class _FacebookPostImageState extends State<FacebookPostImage> {
       child: AspectRatio(
         aspectRatio: _aspectRatio,
         child: Image.network(
-          widget.imageUrl,
+          thumb(widget.imageUrl, 900),
           fit: BoxFit.cover,
           width: double.infinity,
           alignment: Alignment.center,
@@ -873,7 +894,7 @@ class _UserAvatarState extends State<UserAvatar> {
           return CircleAvatar(
             radius: 20,
             backgroundImage: profileImage.startsWith('http')
-                ? NetworkImage(profileImage)
+                ? CachedNetworkImageProvider(thumb(profileImage, 200))
                 : AssetImage(profileImage) as ImageProvider,
           );
         }
@@ -926,7 +947,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
     if (picked != null) {
       final verdict = await checkImage(
         bytes: await picked.readAsBytes(),

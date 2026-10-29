@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/img_url.dart';
 import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -146,7 +147,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                   onPressed: () async {
                     final picker = ImagePicker();
                     final picked =
-                        await picker.pickImage(source: ImageSource.gallery);
+                        await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
                     if (picked != null) {
                       if (kIsWeb) {
                         selectedImageBytes = await picked.readAsBytes();
@@ -331,7 +332,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                   ),
                   onPressed: () async {
                     final picker = ImagePicker();
-                    final picked = await picker.pickImage(source: ImageSource.gallery);
+                    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
                     if (picked != null) {
                       if (kIsWeb) {
                         newImageBytes = await picked.readAsBytes();
@@ -532,7 +533,7 @@ class _MyWardrobeState extends State<MyWardrobe>
 
   Widget _buildItemImage(String imageUrl) {
     return CachedNetworkImage(
-      imageUrl: imageUrl,
+      imageUrl: thumb(imageUrl, 600),
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
@@ -623,7 +624,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                         borderRadius: BorderRadius.circular(12),
                         child: profileImage.isNotEmpty
                             ? CachedNetworkImage(
-                                imageUrl: profileImage,
+                                imageUrl: thumb(profileImage, 200),
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
@@ -935,7 +936,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                       onPressed: () async {
                         final picker = ImagePicker();
                         final picked =
-                            await picker.pickImage(source: ImageSource.gallery);
+                            await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
                         if (picked != null) {
                           setStateDialog(() {
                             loading = true;
@@ -981,7 +982,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                               leading: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
-                                  item['imageUrl'],
+                                  thumb(item['imageUrl'], 150),
                                   width: 48,
                                   height: 48,
                                   fit: BoxFit.cover,
@@ -1104,9 +1105,14 @@ class _MyWardrobeState extends State<MyWardrobe>
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final wide = screenW >= 900;
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F7),
-      appBar: AppBar(
+      // On wide screens the sidebar already names the page.
+      appBar: wide
+          ? null
+          : AppBar(
         automaticallyImplyLeading: false,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -1126,7 +1132,11 @@ class _MyWardrobeState extends State<MyWardrobe>
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.symmetric(
+              horizontal: wide
+                  ? ((screenW - 264 - 1120) / 2).clamp(12.0, 2000.0).toDouble()
+                  : 12.0,
+              vertical: 12.0),
           child: Column(
             children: [
               _buildHeader(),
