@@ -40,3 +40,9 @@ flutter run -d chrome --web-port 5000 --dart-define=RECOMMENDER_URL=http://192.1
 Midnight navy `#121A33`, rose gold `#E0A58F`, porcelain `#FAF9F7`. Headings use Sora and body text uses Manrope. At widths of 900px and above the app uses a sidebar and split-screen login. Below that it uses a bottom navigation bar.
 
 Signed-out users see the landing page first (`lib/landing.dart`), then the login page.
+
+## Flutter resources
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- [Online documentation](https://docs.flutter.dev/): tutorials, samples, guidance on mobile development, and a full API reference.
