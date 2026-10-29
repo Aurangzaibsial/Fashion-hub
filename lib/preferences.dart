@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -118,12 +119,12 @@ class _PreferencesState extends State<Preferences> {
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -241,7 +242,7 @@ class _PreferencesState extends State<Preferences> {
             style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E))),
+                color: Color(0xFF0E1220))),
         const SizedBox(height: 8),
         Text(
           subtitle,
@@ -254,13 +255,13 @@ class _PreferencesState extends State<Preferences> {
   }
 
   Widget _buildSectionCard({required String title, required Widget child}) {
-    return Card(
+    return HoverCard(
       elevation: 0,
-      color: const Color.fromARGB(207, 178, 204, 243),
+      color: const Color(0xFFE4E8F2),
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color.fromARGB(255, 94, 143, 218)),
+        side: const BorderSide(color: Color(0xFF121A33)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -290,16 +291,16 @@ class _PreferencesState extends State<Preferences> {
           selected: items[item] ?? false,
           onSelected: (value) => setState(() => items[item] = value),
           label: Text(item),
-          selectedColor: Colors.purple.shade50,
-          checkmarkColor: Colors.purple,
+          selectedColor: Color(0xFFE4E8F2),
+          checkmarkColor: Color(0xFF121A33),
           labelStyle: TextStyle(
-            color: items[item]! ? Colors.purple : Colors.black87,
+            color: items[item]! ? Color(0xFF121A33) : Colors.black87,
             fontWeight: FontWeight.w500,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
-              color: items[item]! ? Colors.purple : Colors.white,
+              color: items[item]! ? Color(0xFF121A33) : Colors.white,
             ),
           ),
         );
@@ -399,29 +400,29 @@ class _PreferencesState extends State<Preferences> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              side: const BorderSide(color: Color(0xFF6C3DE8), width: 1.5),
+              side: const BorderSide(color: Color(0xFF121A33), width: 1.5),
             ),
             child: const Text('Cancel',
                 style: TextStyle(
-                    color: Color(0xFF6C3DE8), fontWeight: FontWeight.w600)),
+                    color: Color(0xFF121A33), fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: GestureDetector(
+          child: HoverTap(
             onTap: _savePreferences,
             child: Container(
               height: 52,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF6C3DE8).withOpacity(0.3),
+                    color: const Color(0xFF121A33).withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),

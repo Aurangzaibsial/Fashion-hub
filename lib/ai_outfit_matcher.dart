@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -40,7 +41,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library, color: Color(0xFF6C3DE8)),
+              leading: const Icon(Icons.photo_library, color: Color(0xFF121A33)),
               title: const Text('Pick from Gallery'),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -57,7 +58,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: Color(0xFFE040AB)),
+              leading: const Icon(Icons.camera_alt, color: Color(0xFFA15A44)),
               title: const Text('Take a Photo'),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -207,13 +208,13 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         title: const Text(
           'AI 3-Dress Matcher',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
         ),
-        backgroundColor: const Color(0xFF6C3DE8),
+        backgroundColor: const Color(0xFF121A33),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -226,7 +227,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -277,7 +278,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
                     child: ChoiceChip(
                       label: Text(occ),
                       selected: isSelected,
-                      selectedColor: const Color(0xFF6C3DE8),
+                      selectedColor: const Color(0xFF121A33),
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
                         fontWeight: FontWeight.w600,
@@ -320,7 +321,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
               height: 52,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C3DE8),
+                  backgroundColor: const Color(0xFF121A33),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 2,
                 ),
@@ -357,7 +358,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
     final bool isWinner =
         _analysisResult != null && _analysisResult!['best_dress_index'] == (index + 1);
 
-    return GestureDetector(
+    return HoverTap(
       onTap: () => _pickImage(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -366,13 +367,13 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isWinner ? const Color(0xFFE040AB) : Colors.grey.shade300,
+            color: isWinner ? const Color(0xFFE0A58F) : Colors.grey.shade300,
             width: isWinner ? 3.0 : 1.0,
           ),
           boxShadow: isWinner
               ? [
                   BoxShadow(
-                    color: const Color(0xFFE040AB).withOpacity(0.3),
+                    color: const Color(0xFFE0A58F).withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -401,10 +402,10 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6C3DE8).withOpacity(0.08),
+                        color: const Color(0xFF121A33).withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.add_a_photo_outlined, color: Color(0xFF6C3DE8), size: 24),
+                      child: const Icon(Icons.add_a_photo_outlined, color: Color(0xFF121A33), size: 24),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -424,7 +425,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE040AB),
+                      color: const Color(0xFFE0A58F),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
@@ -490,7 +491,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF6C3DE8),
+                        color: Color(0xFF121A33),
                       ),
                     ),
                     Text(
@@ -503,14 +504,14 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6C3DE8).withOpacity(0.1),
+                  color: const Color(0xFF121A33).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   metrics['harmony_score'] ?? '96%',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF6C3DE8),
+                    color: Color(0xFF121A33),
                     fontSize: 14,
                   ),
                 ),
@@ -532,15 +533,15 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F7FF),
+              color: const Color(0xFFF3EEF0),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF6C3DE8).withOpacity(0.15)),
+              border: Border.all(color: const Color(0xFF121A33).withOpacity(0.15)),
             ),
             child: Text(
               caption,
               style: const TextStyle(
                 fontSize: 13.5,
-                color: Color(0xFF2C2C3E),
+                color: Color(0xFF1A2240),
                 height: 1.45,
                 fontWeight: FontWeight.w500,
               ),
@@ -553,7 +554,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.lightbulb_outline, color: Color(0xFFE040AB), size: 18),
+                const Icon(Icons.lightbulb_outline, color: Color(0xFFE0A58F), size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: RichText(
@@ -562,7 +563,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
                       children: [
                         const TextSpan(
                           text: 'Styling Tip: ',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE040AB)),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFA15A44)),
                         ),
                         TextSpan(text: stylingTip),
                       ],

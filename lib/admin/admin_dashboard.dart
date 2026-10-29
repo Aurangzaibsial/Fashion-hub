@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -41,10 +42,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF6C3DE8),
+        backgroundColor: const Color(0xFF121A33),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFFE040AB),
+          indicatorColor: const Color(0xFFE0A58F),
           indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
@@ -95,7 +96,7 @@ class AdminOverviewScreen extends StatelessWidget {
                   stream: firestore.collection('users').snapshots(),
                   title: 'Total Users',
                   icon: Icons.people_outline,
-                  color: const Color(0xFF6C3DE8),
+                  color: const Color(0xFF121A33),
                 ),
               ),
               const SizedBox(width: 8),
@@ -104,7 +105,7 @@ class AdminOverviewScreen extends StatelessWidget {
                   stream: firestore.collection('trendingPosts').snapshots(),
                   title: 'Trending Posts',
                   icon: Icons.auto_awesome,
-                  color: const Color(0xFFE040AB),
+                  color: const Color(0xFFE0A58F),
                 ),
               ),
               const SizedBox(width: 8),
@@ -121,7 +122,7 @@ class AdminOverviewScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Quick System Status Card
-          Card(
+          HoverCard(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 2,
             child: Padding(
@@ -131,7 +132,7 @@ class AdminOverviewScreen extends StatelessWidget {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.shield, color: Color(0xFF6C3DE8)),
+                      Icon(Icons.shield, color: Color(0xFF121A33)),
                       SizedBox(width: 8),
                       Text(
                         'Admin Access Active',
@@ -163,7 +164,7 @@ class AdminOverviewScreen extends StatelessWidget {
       stream: stream,
       builder: (context, snapshot) {
         final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
-        return Card(
+        return HoverCard(
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(

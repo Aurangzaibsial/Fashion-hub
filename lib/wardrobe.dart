@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -318,7 +319,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                 const SizedBox(height: 14),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C3DE8),
+                    backgroundColor: const Color(0xFF121A33),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
@@ -368,7 +369,7 @@ class _MyWardrobeState extends State<MyWardrobe>
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C3DE8),
+                backgroundColor: const Color(0xFF121A33),
                 foregroundColor: Colors.white,
               ),
               onPressed: isUploading
@@ -487,7 +488,7 @@ class _MyWardrobeState extends State<MyWardrobe>
   }
 
   Widget _buildItemCard(Map<String, dynamic> data, String docId) {
-    return GestureDetector(
+    return HoverTap(
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -608,7 +609,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E))),
+                      color: Color(0xFF0E1220))),
               const SizedBox(height: 6),
               Text("Easily manage and organize your outfits",
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
@@ -649,7 +650,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                               child: ElevatedButton(
                                 onPressed: () => _showAddItemDialog(context),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6C3DE8),
+                                  backgroundColor: const Color(0xFF121A33),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
@@ -669,7 +670,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                                 onPressed: () =>
                                     _showRecommendationDialog(context),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE040AB),
+                                  backgroundColor: const Color(0xFFE0A58F),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
@@ -761,7 +762,7 @@ class _MyWardrobeState extends State<MyWardrobe>
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+            colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -889,7 +890,7 @@ class _MyWardrobeState extends State<MyWardrobe>
           return AlertDialog(
             title: const Row(
               children: [
-                Icon(Icons.auto_awesome, color: Color.fromARGB(255, 198, 82, 136)),
+                Icon(Icons.auto_awesome, color: Color(0xFFE0A58F)),
                 SizedBox(width: 8),
                 Text("Smart Outfit Suggestion", style: TextStyle(fontSize: 18)),
               ],
@@ -927,7 +928,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                       icon: const Icon(Icons.upload),
                       label: const Text("Select Outfit Image"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
+                        backgroundColor: const Color(0xFF121A33),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
@@ -1104,13 +1105,13 @@ class _MyWardrobeState extends State<MyWardrobe>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),

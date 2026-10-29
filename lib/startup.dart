@@ -1,3 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:fitfuseapp/community.dart';
 import 'package:fitfuseapp/explore.dart';
 import 'package:fitfuseapp/homepage.dart';
@@ -52,8 +56,210 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
     const ProfilePage(),
   ];
 
+  static const _navItems = <List<Object>>[
+    [Icons.home_outlined, Icons.home_rounded, 'Home'],
+    [Icons.checkroom_outlined, Icons.checkroom_rounded, 'Wardrobe'],
+    [Icons.people_alt_outlined, Icons.people_alt_rounded, 'Community'],
+    [Icons.explore_outlined, Icons.explore_rounded, 'Explore'],
+    [Icons.person_outline_rounded, Icons.person_rounded, 'Profile'],
+  ];
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 264,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Color(0xFFE7E4EC))),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF121A33),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text('N',
+                          style: GoogleFonts.sora(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      Positioned(
+                        right: 8,
+                        bottom: 9,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                              color: Color(0xFFE0A58F), shape: BoxShape.circle),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: GoogleFonts.sora(
+                          fontSize: 16,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          color: const Color(0xFF0E1220)),
+                      children: const [
+                        TextSpan(text: 'NextGen\n'),
+                        TextSpan(
+                            text: 'Cloth Engine',
+                            style: TextStyle(color: Color(0xFFA15A44))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+          for (var i = 0; i < _navItems.length; i++) _buildSideItem(i),
+          const Spacer(),
+          _buildUserCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserCard() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+      builder: (context, snap) {
+        final d = snap.data?.data();
+        final first = (d?['firstName'] ?? '').toString().trim();
+        final last = (d?['lastName'] ?? '').toString().trim();
+        var name = '$first $last'.trim();
+        if (name.isEmpty) name = (user.displayName ?? '').trim();
+        if (name.isEmpty) name = 'My account';
+        final photo = (d?['profilePicURL'] ?? d?['profileImage'] ?? '').toString();
+        final initials = name
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .take(2)
+            .map((w) => w[0].toUpperCase())
+            .join();
+        return HoverTap(
+          lift: false,
+          onTap: () => onItemTapped(4),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAF9F7),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE7E4EC)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: const Color(0xFFF3E3DD),
+                  backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null,
+                  child: photo.startsWith('http')
+                      ? null
+                      : Text(initials,
+                          style: GoogleFonts.sora(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFA15A44))),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0E1220))),
+                      Text('View profile',
+                          style: GoogleFonts.manrope(
+                              fontSize: 12, color: const Color(0xFF5B6177))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSideItem(int index) {
+    final item = _navItems[index];
+    final selected = selectedIndex == index;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: HoverTap(
+        lift: false,
+        onTap: () => onItemTapped(index),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF121A33) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                (selected ? item[1] : item[0]) as IconData,
+                size: 22,
+                color: selected ? Colors.white : const Color(0xFF5B6177),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                item[2] as String,
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? Colors.white : const Color(0xFF5B6177),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.of(context).size.width >= 900) {
+      return Scaffold(
+        body: Row(
+          children: [
+            _buildSidebar(),
+            Expanded(child: pages[selectedIndex]),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       body: pages[selectedIndex],
       bottomNavigationBar: Container(
@@ -88,7 +294,7 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
 
   Widget _buildNavItem(IconData icon, IconData activeIcon, String label, int index) {
     final bool isSelected = selectedIndex == index;
-    return GestureDetector(
+    return HoverTap(
       onTap: () => onItemTapped(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
@@ -98,7 +304,7 @@ class _StartupState extends State<Startup> with TickerProviderStateMixin {
         decoration: isSelected
             ? BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

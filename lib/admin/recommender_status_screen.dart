@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -47,7 +48,7 @@ class _RecommenderStatusScreenState extends State<RecommenderStatusScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -65,7 +66,7 @@ class _RecommenderStatusScreenState extends State<RecommenderStatusScreen> {
             const SizedBox(height: 20),
 
             // Health Card
-            Card(
+            HoverCard(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Padding(
@@ -117,7 +118,7 @@ class _RecommenderStatusScreenState extends State<RecommenderStatusScreen> {
             const SizedBox(height: 20),
 
             // Action Card
-            Card(
+            HoverCard(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Padding(
@@ -139,7 +140,7 @@ class _RecommenderStatusScreenState extends State<RecommenderStatusScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C3DE8),
+                          backgroundColor: const Color(0xFF121A33),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -179,7 +180,7 @@ class _RecommenderStatusScreenState extends State<RecommenderStatusScreen> {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF6C3DE8)),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF121A33)),
         ),
       ],
     );

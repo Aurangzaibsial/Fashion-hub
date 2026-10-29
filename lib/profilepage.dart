@@ -1,5 +1,6 @@
 // ignore_for_file: unnecessary_cast
 
+import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:convert';
 import 'package:fitfuseapp/login.dart';
 import 'package:fitfuseapp/preferences.dart';
@@ -412,7 +413,7 @@ class _ProfilePageState extends State<ProfilePage> {
               right: 0,
               child: Column(
                 children: [
-                  GestureDetector(
+                  HoverTap(
                     onTap: effectiveUserId == _auth.currentUser!.uid
                         ? _confirmAndUpdateProfileImage
                         : null,
@@ -484,7 +485,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C3DE8),
+                        backgroundColor: const Color(0xFF121A33),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -510,7 +511,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Expanded(
-                      child: GestureDetector(
+                      child: HoverTap(
                         onTap: () {
                           Navigator.push(
                             context,
@@ -522,7 +523,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           height: 44,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -540,7 +541,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF6C3DE8), width: 1.5),
+                          side: const BorderSide(color: Color(0xFF121A33), width: 1.5),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -548,7 +549,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         onPressed: () => _showEditProfileDialog(userData),
                         child: const Text("Edit Profile",
                             style: TextStyle(
-                                color: Color(0xFF6C3DE8), fontWeight: FontWeight.w600, fontSize: 13)),
+                                color: Color(0xFF121A33), fontWeight: FontWeight.w600, fontSize: 13)),
                       ),
                     ),
                   ],
@@ -567,14 +568,14 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6C3DE8).withOpacity(0.25),
+                color: const Color(0xFF121A33).withOpacity(0.25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -591,7 +592,7 @@ class _ProfilePageState extends State<ProfilePage> {
             style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E))),
+                color: Color(0xFF0E1220))),
       ],
     );
     if (onTap != null) {
@@ -672,7 +673,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   .trim();
           if (fullName.isEmpty) fullName = "Anonymous";
         }
-        return Card(
+        return HoverCard(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           color: Colors.white,
           shape: RoundedRectangleBorder(
@@ -710,7 +711,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               if (postImage.isNotEmpty)
-                GestureDetector(
+                HoverTap(lift: false,
                   onTap: () => _openFullImage(postImage),
                   child: Image.network(postImage,
                       fit: BoxFit.cover, width: double.infinity, height: 200),
@@ -827,7 +828,7 @@ class _ProfilePageState extends State<ProfilePage> {
       return const Scaffold(body: Center(child: Text('Please sign in')));
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _usersRef.doc(effectiveUserId).snapshots(),
         builder: (context, snapshot) {

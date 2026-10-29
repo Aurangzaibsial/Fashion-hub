@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:ui';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -35,8 +36,8 @@ class _SignupState extends State<Signup> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static const Color _primary = Color(0xFF6C3DE8);
-  static const Color _secondary = Color(0xFFE040AB);
+  static const Color _primary = Color(0xFF121A33);
+  static const Color _secondary = Color(0xFFE0A58F);
 
   InputDecoration _inputDecoration(String label, {Widget? suffixIcon}) {
     return InputDecoration(
@@ -217,7 +218,7 @@ class _SignupState extends State<Signup> {
     required double width,
     required double height,
   }) {
-    return GestureDetector(
+    return HoverTap(
       onTap: onPressed,
       child: Container(
         height: height,
@@ -485,7 +486,7 @@ class _SignupState extends State<Signup> {
                                   color: Colors.white.withOpacity(0.75),
                                 ),
                               ),
-                              GestureDetector(
+                              HoverTap(
                                 onTap: () {
                                   Navigator.push(
                                     context,

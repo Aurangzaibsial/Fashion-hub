@@ -1,5 +1,6 @@
 // ignore_for_file: unnecessary_cast
 
+import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File;
@@ -14,8 +15,8 @@ import 'package:http/http.dart' as http;
 
 import 'profilepage.dart';
 
-const Color primaryColor = Color(0xFF6C3DE8);
-const Color secondaryColor = Color(0xFFF5F5F7);
+const Color primaryColor = Color(0xFF121A33);
+const Color secondaryColor = Color(0xFFFAF9F7);
 const Color accentColor = Colors.white;
 
 class UserCache {
@@ -69,13 +70,13 @@ class _CommunityPageState extends State<CommunityPage> {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: const Color(0xFFF5F5F7),
+          backgroundColor: const Color(0xFFFAF9F7),
           appBar: AppBar(
             automaticallyImplyLeading: false,
             flexibleSpace: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                  colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -168,7 +169,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     unselectedLabelColor: Colors.grey[600],
                     indicator: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                        colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
@@ -199,7 +200,7 @@ class _CommunityPageState extends State<CommunityPage> {
               context,
               MaterialPageRoute(builder: (context) => const CreatePostPage()),
             ),
-            backgroundColor: const Color(0xFF6C3DE8),
+            backgroundColor: const Color(0xFF121A33),
             foregroundColor: Colors.white,
             child: const Icon(Icons.add, size: 30),
           ),
@@ -643,7 +644,7 @@ class _PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return HoverCard(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: Colors.white,
       clipBehavior: Clip.antiAlias,
@@ -723,7 +724,7 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
           if (postImage.isNotEmpty)
-            GestureDetector(
+            HoverTap(lift: false,
               onTap: _openFullImage,
               child: FacebookPostImage(imageUrl: postImage),
             ),
@@ -1011,13 +1012,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         title: const Text("Create Post", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -1072,12 +1073,12 @@ class FullImagePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -1144,13 +1145,13 @@ class _CommentsPageState extends State<CommentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         title: const Text("Comments", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),

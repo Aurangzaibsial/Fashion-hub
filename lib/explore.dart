@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File;
@@ -75,14 +76,14 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       appBar: AppBar(
         centerTitle: true,
         title: const Text("Fashion Trends", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+              colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -105,7 +106,7 @@ class _ExplorePageState extends State<ExplorePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddPost,
-        backgroundColor: const Color(0xFF6C3DE8),
+        backgroundColor: const Color(0xFF121A33),
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
@@ -124,7 +125,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
-                    color: Color(0xFF1A1A2E),
+                    color: Color(0xFF0E1220),
                   ),
                 ),
               ),
@@ -163,7 +164,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     decoration: InputDecoration(
                       hintText: 'Search Designs',
                       hintStyle: TextStyle(color: Colors.grey[400]),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF6C3DE8)),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF121A33)),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
                               onPressed: () {
@@ -193,18 +194,18 @@ class _ExplorePageState extends State<ExplorePage> {
                         label: Text(
                           filter,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : const Color(0xFF6C3DE8),
+                            color: isSelected ? Colors.white : const Color(0xFF121A33),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         selected: isSelected,
                         onSelected: (_) => _changeFilter(filter),
                         backgroundColor: Colors.white,
-                        selectedColor: const Color(0xFF6C3DE8),
+                        selectedColor: const Color(0xFF121A33),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                           side: BorderSide(
-                            color: isSelected ? Colors.transparent : const Color(0xFF6C3DE8),
+                            color: isSelected ? Colors.transparent : const Color(0xFF121A33),
                           ),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -216,7 +217,7 @@ class _ExplorePageState extends State<ExplorePage> {
               const SizedBox(height: 24),
               const Text(
                 "Influencer's Choice",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0E1220)),
               ),
               const SizedBox(height: 12),
               StreamBuilder<QuerySnapshot>(
@@ -319,7 +320,7 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
     final String caption = postData['caption'] ?? '';
     final String postImage = postData['postImage'] ?? '';
 
-    return Card(
+    return HoverCard(
       margin: const EdgeInsets.only(bottom: 24),
       color: Colors.white,
       shape: RoundedRectangleBorder(
@@ -358,7 +359,7 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
                     const SizedBox(width: 12),
                     Text(
                       userName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1A1A2E)),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0E1220)),
                     ),
                   ],
                 );
@@ -367,7 +368,7 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
           ),
           // Large Image
           if (postImage.isNotEmpty)
-            GestureDetector(
+            HoverTap(lift: false,
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => FullImagePage(imageUrl: postImage)));
               },
@@ -394,7 +395,7 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
               children: [
                 Text(
                   designName,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E)),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0E1220)),
                 ),
                 const SizedBox(height: 6),
                 ExpandableText(text: caption, trimLength: 80),
@@ -410,14 +411,14 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isVoted ? const Color(0xFF6C3DE8).withOpacity(0.1) : Colors.grey.shade100,
+                              color: isVoted ? const Color(0xFF121A33).withOpacity(0.1) : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
                                 Icon(
                                   isVoted ? Icons.favorite : Icons.favorite_border,
-                                  color: isVoted ? const Color(0xFFE040AB) : Colors.grey.shade600,
+                                  color: isVoted ? const Color(0xFFE0A58F) : Colors.grey.shade600,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 6),
@@ -425,7 +426,7 @@ class _TrendingPostRowState extends State<TrendingPostRow> {
                                   "$voteCount",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: isVoted ? const Color(0xFFE040AB) : Colors.grey.shade600,
+                                    color: isVoted ? const Color(0xFFE0A58F) : Colors.grey.shade600,
                                   ),
                                 ),
                               ],
@@ -632,7 +633,7 @@ class _CreateTrendingPostPageState extends State<CreateTrendingPostPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Add Trending Post"),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFF121A33),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

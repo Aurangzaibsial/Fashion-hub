@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -16,7 +17,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -29,7 +30,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   child: TextField(
                     decoration: InputDecoration(
                       hintText: 'Search users by name, username, or email...',
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF6C3DE8)),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF121A33)),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -129,7 +130,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                       final fullName = '$firstName $lastName'.trim();
 
-                      return Card(
+                      return HoverCard(
                         margin: const EdgeInsets.only(bottom: 12),
                         elevation: 1,
                         shape: RoundedRectangleBorder(
@@ -139,7 +140,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           leading: CircleAvatar(
                             radius: 24,
-                            backgroundColor: const Color(0xFF6C3DE8).withOpacity(0.1),
+                            backgroundColor: const Color(0xFF121A33).withOpacity(0.1),
                             backgroundImage: profileImage.startsWith('http')
                                 ? NetworkImage(profileImage)
                                 : null,
@@ -147,7 +148,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 ? Text(
                                     fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
                                     style: const TextStyle(
-                                      color: Color(0xFF6C3DE8),
+                                      color: Color(0xFF121A33),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   )
@@ -167,7 +168,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: role == 'admin'
-                                      ? Colors.purple.shade100
+                                      ? Color(0xFFD5DBEC)
                                       : Colors.blue.shade100,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -177,7 +178,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: role == 'admin'
-                                        ? Colors.purple.shade900
+                                        ? Color(0xFF121A33)
                                         : Colors.blue.shade900,
                                   ),
                                 ),

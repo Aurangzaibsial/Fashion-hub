@@ -13,10 +13,10 @@ class MessagingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 125, 134, 255),
+      backgroundColor: const Color(0xFF121A33),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFF121A33),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -35,7 +35,7 @@ class MessagingPage extends StatelessWidget {
                 gradient: const LinearGradient(
                   colors: [
                     Color.fromARGB(255, 255, 255, 255),
-                    Color.fromARGB(255, 45, 143, 255),
+                    Color(0xFF1E2A4F),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -109,7 +109,7 @@ class MessagingPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.blueAccent.withOpacity(0.1),
+        color: Color(0xFF121A33).withOpacity(0.1),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
@@ -134,7 +134,7 @@ class MessagingPage extends StatelessWidget {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                   suffixIcon: IconButton(
                     icon:
-                        const Icon(Icons.attach_file, color: Colors.blueAccent),
+                        const Icon(Icons.attach_file, color: Color(0xFF121A33)),
                     onPressed: () {},
                   ),
                 ),
@@ -146,13 +146,13 @@ class MessagingPage extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
-                colors: [Colors.blueAccent, Colors.purpleAccent],
+                colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.blueAccent.withOpacity(0.3),
+                  color: Color(0xFF121A33).withOpacity(0.3),
                   spreadRadius: 1,
                   blurRadius: 8,
                 ),
@@ -194,7 +194,7 @@ class MessageBubble extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: isMe
                 ? const LinearGradient(
-                    colors: [Colors.blueAccent, Colors.purpleAccent],
+                    colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )

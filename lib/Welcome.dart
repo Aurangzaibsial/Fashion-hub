@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:fitfuseapp/login.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -45,7 +46,7 @@ class _MyReelsState extends State<MyReels> {
               Center(
                 child: ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                    colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                   ).createShader(bounds),
                   child: Text(
                     "NextGen Cloth Engine",
@@ -74,7 +75,7 @@ class _MyReelsState extends State<MyReels> {
               ),
               SizedBox(height: screenHeight * 0.05),
               Center(
-                child: GestureDetector(
+                child: HoverTap(
                   onTap: () {
                     Navigator.push(
                         context,
@@ -86,14 +87,14 @@ class _MyReelsState extends State<MyReels> {
                     width: screenWidth * 0.72,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF6C3DE8), Color(0xFFE040AB)],
+                        colors: [Color(0xFF121A33), Color(0xFF1E2A4F)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(32),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6C3DE8).withOpacity(0.4),
+                          color: const Color(0xFF121A33).withOpacity(0.4),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),

@@ -1,3 +1,4 @@
+import 'package:fitfuseapp/hover_tap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -50,7 +51,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFFAF9F7),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -83,7 +84,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
                       index: 1,
                       label: 'Community Posts',
                       icon: Icons.forum_outlined,
-                      activeColor: const Color(0xFF6C3DE8),
+                      activeColor: const Color(0xFF121A33),
                       stream: _firestore.collection('trendingPosts').snapshots(),
                     ),
                   ),
@@ -228,7 +229,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
               badgeIcon = Icons.not_interested_rounded;
             }
 
-            return Card(
+            return HoverCard(
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -368,7 +369,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
             final String postImage = data['postImage'] ?? '';
             final String userId = data['userId'] ?? '';
 
-            return Card(
+            return HoverCard(
               margin: const EdgeInsets.only(bottom: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Column(
@@ -376,7 +377,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
                 children: [
                   ListTile(
                     leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF6C3DE8),
+                      backgroundColor: Color(0xFF121A33),
                       child: Icon(Icons.person, color: Colors.white),
                     ),
                     title: FutureBuilder<DocumentSnapshot>(
