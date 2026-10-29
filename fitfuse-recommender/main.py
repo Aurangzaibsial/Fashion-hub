@@ -14,7 +14,7 @@ from firebase_admin import credentials, firestore
 from sklearn.metrics.pairwise import cosine_similarity
 import io
 from urllib.parse import urlparse
-from image_validator import validate_wardrobe_image, log_security_alert_to_firestore
+from image_validator import validate_wardrobe_image, log_security_alert_to_firestore, rejection_error
 import clip_helper
 
 # --- Device ---
@@ -139,7 +139,7 @@ async def validate_image_endpoint(
         raise HTTPException(415, "Only JPEG/PNG images are allowed")
 
     img_bytes = await file.read()
-    val_res = validate_wardrobe_image(img_bytes, mode="safety" if mode == "safety" else "wardrobe")
+    val_res = validate_wardrobe_image(img_bytes, mode=mode if mode in ("safety", "profile") else "wardrobe")
 
     if not val_res["is_valid"]:
         log_security_alert_to_firestore(
@@ -152,7 +152,7 @@ async def validate_image_endpoint(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": "UNAUTHORIZED_IMAGE",
+                "error": rejection_error(val_res),
                 "violation_type": val_res["violation_type"],
                 "message": val_res["message"],
                 "detected_items": val_res["detected_items"]
@@ -191,7 +191,7 @@ def embed_item(data: EmbedItem):
         raise HTTPException(
             status_code=400,
             detail={
-                "error": "UNAUTHORIZED_IMAGE",
+                "error": rejection_error(val_res),
                 "violation_type": val_res["violation_type"],
                 "message": val_res["message"]
             }
@@ -414,7 +414,7 @@ async def recommend_outfit(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": "UNAUTHORIZED_IMAGE",
+                "error": rejection_error(val_res),
                 "violation_type": val_res["violation_type"],
                 "message": val_res["message"],
                 "detected_items": val_res["detected_items"]
@@ -505,9 +505,9 @@ async def compare_dresses(
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": "UNAUTHORIZED_IMAGE",
+                    "error": rejection_error(val_res),
                     "violation_type": val_res["violation_type"],
-                    "message": f"Dress #{idx + 1} is unauthorized: {val_res['message']}",
+                    "message": f"Dress #{idx + 1}: {val_res['message']}" if rejection_error(val_res) == "LOW_QUALITY_IMAGE" else f"Dress #{idx + 1} is unauthorized: {val_res['message']}",
                     "detected_items": val_res["detected_items"]
                 }
             )

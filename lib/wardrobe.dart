@@ -436,10 +436,11 @@ class _MyWardrobeState extends State<MyWardrobe>
                           selectedCategory != data['category'] ||
                           selectedOccasion != data['occasion'] ||
                           nameController.text.trim() != data['name'];
+                      dynamic rejectedDetail;
                       if (finalImageUrl != null && detailsChanged) {
                         try {
                           final embedUri = Uri.parse("$kRecommenderUrl/embed-item");
-                          await http.post(
+                          final embedResp = await http.post(
                             embedUri,
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({
@@ -451,11 +452,24 @@ class _MyWardrobeState extends State<MyWardrobe>
                               if (photoChanged) 'oldImageUrl': data['imageUrl']?.toString() ?? '',
                             }),
                           );
+                          // The backend re-checks the saved photo; put the old photo back if it rejects the new one
+                          if (embedResp.statusCode == 400 && photoChanged) {
+                            try {
+                              rejectedDetail = jsonDecode(embedResp.body)['detail'];
+                            } catch (_) {}
+                            rejectedDetail ??= 'The new photo was not accepted.';
+                            await _wardrobeCollection.doc(docId).update({'imageUrl': data['imageUrl']});
+                          }
                         } catch (_) {}
                       }
 
                       setStateDialog(() => isUploading = false);
                       Navigator.pop(dialogCtx);
+
+                      if (rejectedDetail != null) {
+                        if (context.mounted) _showSecurityAlertModal(context, rejectedDetail);
+                        return;
+                      }
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

@@ -75,6 +75,22 @@ WARDROBE_CLASSES = {
     "pickelhaube", "Christmas stocking", "handkerchief", "hair slide",
 }
 
+# ImageNet classes that are really leather goods (shoes, belts, bags) as often as weapons.
+AMBIGUOUS_WEAPON_CLASSES = {"holster", "scabbard"}
+STRONG_IMAGENET_WEAPON = 0.25
+
+# CLIP weapon probability at or above which an image is rejected. Measured: weapons >= 0.94,
+# normal photos (incl. 74 real wardrobe items) <= 0.77.
+CLIP_WEAPON_THRESHOLD = 0.85
+
+# Wardrobe uploads need at least this CLIP "is clothing / footwear / accessory" probability.
+# Measured: 75 real wardrobe items >= 0.59; the party-props photo that got through scored 0.00.
+CLIP_WARDROBE_MIN = 0.3
+
+# CLIP probability at or above which a profile picture is rejected as a screenshot / chart / banner.
+# Measured: such images >= 0.67, real profile photos and everyday photos <= 0.53.
+CLIP_DOCUMENT_THRESHOLD = 0.6
+
 def is_wardrobe_category(cls_name: str) -> bool:
     return cls_name in WARDROBE_CLASSES
 
@@ -179,11 +195,75 @@ def check_document_or_screenshot(img: Image.Image) -> tuple[bool, str]:
     return False, ""
 
 
+QUALITY_VIOLATION = "LOW_QUALITY_IMAGE"
+MIN_IMAGE_SIDE = 150          # px; smaller photos can't be judged reliably
+MIN_SHARPNESS = 100.0         # measured: sharp photos >= 220, photos blurred past mild softness < 70 (median)
+MIN_PIXEL_STD = 8.0           # a (nearly) single-colour image carries no photo
+
+
+def image_sharpness(img: Image.Image) -> float:
+    """
+    Sharpest-region score: the 90th percentile of the Laplacian variance over a 6x6 grid, measured
+    at 512px. A uniformly blurry photo scores low everywhere; a sharp subject on a soft background
+    still scores high in the tiles that contain the subject.
+    """
+    g = img.convert("L")
+    w, h = g.size
+    scale = 512 / max(w, h)
+    if scale < 1:
+        g = g.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.LANCZOS)
+    a = np.asarray(g, dtype=np.float32)
+    lap = a[1:-1, 1:-1] * -4 + a[:-2, 1:-1] + a[2:, 1:-1] + a[1:-1, :-2] + a[1:-1, 2:]
+    rows, cols = lap.shape
+    th, tw = max(rows // 6, 1), max(cols // 6, 1)
+    tiles = [lap[i:i + th, j:j + tw].var() for i in range(0, rows - th + 1, th) for j in range(0, cols - tw + 1, tw)]
+    return float(np.percentile(tiles, 90))
+
+
+MAX_BLOCKINESS = 3.0          # measured: real photos <= 2.2, JPEG quality <= 5 copies median >= 4.4
+
+
+def jpeg_blockiness(img: Image.Image) -> float:
+    """Gradient at the 8px JPEG block borders vs elsewhere: ~1 for clean photos, high for crushed ones."""
+    a = np.asarray(img.convert("L"), dtype=np.float32)
+    h, w = a.shape
+    a = a[: h - h % 8, : w - w % 8]
+    ratios = []
+    for d in (np.abs(np.diff(a, axis=1)).mean(axis=0), np.abs(np.diff(a, axis=0)).mean(axis=1)):
+        idx = np.arange(len(d))
+        ratios.append(d[idx % 8 == 7].mean() / max(d[idx % 8 != 7].mean(), 1e-3))
+    return float(sum(ratios) / 2)
+
+
+def check_image_quality(img: Image.Image):
+    """Returns a user-facing reason when the photo is too small, blank or blurry, else None."""
+    w, h = img.size
+    if min(w, h) < MIN_IMAGE_SIDE:
+        return (f"This photo is too small ({w}x{h}px). Please upload a clear photo "
+                f"at least {MIN_IMAGE_SIDE}x{MIN_IMAGE_SIDE} pixels.")
+    try:
+        if float(np.asarray(img.convert("L"), dtype=np.float32).std()) < MIN_PIXEL_STD:
+            return "This photo looks blank or damaged. Please choose a different photo."
+        if image_sharpness(img) < MIN_SHARPNESS:
+            return "This photo is too blurry. Please upload a clear, sharp photo."
+        if min(w, h) >= 64 and jpeg_blockiness(img) >= MAX_BLOCKINESS:
+            return "This photo is heavily compressed or damaged. Please upload the original, clear photo."
+    except Exception as e:
+        print(f"Quality check error: {e}")
+    return None
+
+
+def rejection_error(val_res: dict) -> str:
+    """API error code for a rejected image: quality problems are not security violations."""
+    return "LOW_QUALITY_IMAGE" if val_res.get("violation_type") == QUALITY_VIOLATION else "UNAUTHORIZED_IMAGE"
+
+
 def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
     """
     Validates whether the uploaded image is safe and wardrobe-related.
     mode="wardrobe": must be a clothing/footwear/accessory photo (strict).
-    mode="safety":   only rejects documents, weapons and gore (profile/community photos).
+    mode="safety":   only rejects documents, weapons and gore (community photos).
+    mode="profile":  "safety" plus: screenshots, charts and text banners are not accepted.
     Returns:
         {
             "is_valid": bool,
@@ -193,13 +273,28 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
             "confidence": float
         }
     """
+    profile_photo = mode == "profile"
+    if profile_photo:
+        mode = "safety"
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     except Exception:
         return {
             "is_valid": False,
-            "violation_type": "INVALID_IMAGE_FILE",
-            "message": "Uploaded file is corrupted or not a valid image.",
+            "violation_type": QUALITY_VIOLATION,
+            "message": "This file is damaged or not a valid image. Please choose a different photo.",
+            "detected_items": [],
+            "confidence": 0.0
+        }
+
+    # 0. Photo quality: tiny, blank or blurry photos can't be judged reliably (and used to be
+    #    mislabelled as weapons). This is not a security violation, so it is not alerted to admin.
+    quality_msg = check_image_quality(img)
+    if quality_msg:
+        return {
+            "is_valid": False,
+            "violation_type": QUALITY_VIOLATION,
+            "message": quality_msg,
             "detected_items": [],
             "confidence": 0.0
         }
@@ -224,6 +319,18 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
     clip_res = clip_helper.analyze(img) if (mode != "safety" or not looks_like_clothing) else None
     if not looks_like_clothing and clip_res is not None and clip_res["clothing"] >= 0.6:
         looks_like_clothing = True
+    # Small accessories (cufflinks, watches) read as clothing to CLIP only weakly, but its top
+    # category is clearly "Accessories". Measured: no non-weapon, non-clothing photo scored this way.
+    if not looks_like_clothing and clip_res is not None and clip_res["clothing"] >= 0.15:
+        top_cat = max(clip_res["categories"], key=clip_res["categories"].get)
+        if top_cat == "Accessories" and clip_res["categories"][top_cat] >= 0.6:
+            looks_like_clothing = True
+
+    # CLIP's weapon probability: used by step 2b and to confirm ImageNet's ambiguous weapon guesses
+    weapon_prob = clip_helper.weapon_score(img)
+    # ImageNet calls leather shoes "holster" / "scabbard" / "hatchet". A weak or ambiguous guess counts
+    # only when CLIP agrees; a strong guess on a real weapon class (>= 25%) always counts.
+    clip_agrees = weapon_prob is None or weapon_prob >= 0.5
 
     # 2. Weapons / blades / dangerous objects (always enforced)
     detected_weapons = []
@@ -233,13 +340,13 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
             lower_name in WEAPON_CLASSES or
             any(k in lower_name for k in WEAPON_KEYWORDS)
         )
-        if is_weapon and prob >= 0.05:
+        if is_weapon and prob >= 0.05 and (clip_agrees or (lower_name not in AMBIGUOUS_WEAPON_CLASSES and prob >= STRONG_IMAGENET_WEAPON)):
             detected_weapons.append(f"{cls_name} ({round(prob * 100, 1)}%)")
 
     for w_cls in WEAPON_CLASSES:
         if w_cls in _categories:
             idx = _categories.index(w_cls)
-            if probs[idx] >= 0.06:
+            if probs[idx] >= 0.06 and (clip_agrees or (w_cls not in AMBIGUOUS_WEAPON_CLASSES and probs[idx] >= STRONG_IMAGENET_WEAPON)):
                 detected_weapons.append(f"{w_cls} ({round(float(probs[idx]) * 100, 1)}%)")
 
     if detected_weapons:
@@ -250,6 +357,19 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
             "message": f"Unauthorized image: Prohibited weapon/blade detected [{', '.join(detected_weapons[:2])}]. Weapons, knives, and dangerous items are strictly forbidden.",
             "detected_items": detected_weapons,
             "confidence": round(float(top_class_prob), 2)
+        }
+
+    # 2b. CLIP weapon check: covers what ImageNet has no class for (swords, axes, ammunition, drawings)
+    if weapon_prob is not None and weapon_prob >= CLIP_WEAPON_THRESHOLD:
+        return {
+            "is_valid": False,
+            "violation_type": "WEAPON_DETECTED",
+            "message": (
+                f"Unauthorized image: Prohibited weapon or ammunition detected ({round(weapon_prob * 100)}% confidence). "
+                f"Weapons, knives, and dangerous items are strictly forbidden."
+            ),
+            "detected_items": [f"weapon / ammunition ({round(weapon_prob * 100)}%)"],
+            "confidence": round(weapon_prob, 2)
         }
 
     # 3. Document / Screenshot / PDF check (skipped when the classifier sees clothing,
@@ -278,6 +398,21 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
                 "confidence": 0.95
             }
 
+    # Profile pictures must be photos: screenshots, charts and text banners are rejected
+    if profile_photo:
+        doc_prob = clip_helper.document_score(img)
+        if doc_prob is not None and doc_prob >= CLIP_DOCUMENT_THRESHOLD:
+            return {
+                "is_valid": False,
+                "violation_type": "NON_PHOTO_IMAGE",
+                "message": (
+                    "Unauthorized image: Screenshots, documents, charts and banners cannot be used as a "
+                    "profile picture. Please upload a photo."
+                ),
+                "detected_items": [f"screenshot / document / banner ({round(doc_prob * 100)}%)"],
+                "confidence": round(doc_prob, 2)
+            }
+
     # Safety mode (profile / community photos) stops here
     if mode == "safety":
         return {
@@ -286,6 +421,20 @@ def validate_wardrobe_image(image_bytes: bytes, mode: str = "wardrobe") -> dict:
             "message": "Image passed safety checks.",
             "detected_items": [top_class_name],
             "confidence": round(top_class_prob, 2)
+        }
+
+    # CLIP veto: ImageNet can misread non-clothing as clothing (party props as "hair slide" / "sandal").
+    wardrobe_prob = clip_helper.wardrobe_score(img)
+    if wardrobe_prob is not None and wardrobe_prob < CLIP_WARDROBE_MIN:
+        return {
+            "is_valid": False,
+            "violation_type": "NON_WARDROBE_ITEM",
+            "message": (
+                "Unauthorized image: This does not look like a clothing item, footwear or fashion accessory. "
+                "Only authentic clothing, footwear, and fashion accessories are accepted."
+            ),
+            "detected_items": [f"not a wardrobe item ({round(wardrobe_prob * 100)}% clothing)"],
+            "confidence": round(1 - wardrobe_prob, 2)
         }
 
     # A portrait (photo, painting or banner of a person) is not a wardrobe item, even though
@@ -333,6 +482,8 @@ def log_security_alert_to_firestore(db, user_id: str, violation_type: str, detai
     Logs an unauthorized upload attempt into Firestore 'security_alerts' collection.
     Also looks up the user's name/email to make it easily identifiable by the Admin.
     """
+    if violation_type == QUALITY_VIOLATION:
+        return  # blurry / tiny / blank photos are not security violations, so no admin alert
     if db is None:
         print("[WARN] Firestore client is None, cannot log security alert.")
         return

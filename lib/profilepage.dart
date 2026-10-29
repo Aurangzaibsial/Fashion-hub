@@ -87,7 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
           bytes: await picked.readAsBytes(),
           userId: _currentUser!.uid,
           action: 'profile_picture',
-          mode: 'safety',
+          mode: 'profile',
         );
         if (!verdict.allowed) {
           if (mounted) showImageRejection(context, verdict);

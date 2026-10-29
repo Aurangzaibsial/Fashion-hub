@@ -131,14 +131,7 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
         setState(() {
           _isAnalyzing = false;
         });
-        final detail = jsonResp['detail'];
-        String errorMsg = "One or more of the selected images was rejected.";
-        if (detail is Map && detail['message'] != null) {
-          errorMsg = detail['message'].toString();
-        } else if (detail is String) {
-          errorMsg = detail;
-        }
-        _showSecurityAlertModal(errorMsg);
+        _showSecurityAlertModal(jsonResp['detail']);
         return;
       }
     } catch (_) {
@@ -156,8 +149,8 @@ class _AIOutfitMatcherScreenState extends State<AIOutfitMatcherScreen> {
     ));
   }
 
-  void _showSecurityAlertModal(String message) =>
-      showSecurityAlert(context, message);
+  void _showSecurityAlertModal(dynamic detail) =>
+      showSecurityAlert(context, detail);
 
   void _generateSmartOnDeviceRecommendation() {
     // Generate intelligent score and tailored fashion explanation

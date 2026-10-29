@@ -34,7 +34,7 @@ class ImageCheck {
 /// Sends [bytes] to the backend's /validate-image endpoint.
 ///
 /// [mode] is `wardrobe` (must be clothing / footwear / accessory) or `safety`
-/// (only rejects weapons, gore and similar - for profile / community photos).
+/// (only rejects weapons, gore and similar - for community photos) or `profile` (also rejects screenshots, charts and banners).
 ///
 /// Fails closed: if the backend cannot be reached the image is reported as
 /// unverified instead of being accepted.
@@ -175,8 +175,39 @@ void showImageRejection(BuildContext context, ImageCheck result) {
   showSecurityAlert(context, result.detail);
 }
 
+/// Shown when a photo is too small, blank or blurry. Not a violation, so nothing is sent to the admin.
+void _showQualityAlert(BuildContext ctx, String? message) {
+  showDialog(
+    context: ctx,
+    builder: (alertCtx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.blur_on_rounded, color: Color(0xFFE08A00), size: 28),
+          SizedBox(width: 8),
+          Expanded(child: Text('Photo quality too low', style: TextStyle(fontSize: 18))),
+        ],
+      ),
+      content: Text(
+        message ?? 'This photo is too blurry or too small. Please upload a clear, sharp photo.',
+        style: const TextStyle(fontSize: 14, height: 1.4),
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: () => Navigator.pop(alertCtx),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
+
 /// The red "Security Alert" dialog shown for every unauthorized image.
 void showSecurityAlert(BuildContext ctx, dynamic detail) {
+  if (detail is Map && detail['error'] == 'LOW_QUALITY_IMAGE') {
+    _showQualityAlert(ctx, detail['message']?.toString());
+    return;
+  }
   String message =
       'The selected image is not permitted. Weapons, violence, and non-wardrobe objects are strictly forbidden.';
   if (detail is Map && detail['message'] != null) {
