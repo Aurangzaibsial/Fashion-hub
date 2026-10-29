@@ -13,6 +13,8 @@ Flutter picks a random web port unless one is given, so always pass `--web-port`
 
 ## Getting started (step by step)
 
+Short version with just the commands: [START_GUIDE.md](START_GUIDE.md).
+
 ### 1. Install the prerequisites
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart 3.5 or newer) and Google Chrome
