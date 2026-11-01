@@ -14,7 +14,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:fitfuseapp/image_guard.dart';
 
 class MyWardrobe extends StatefulWidget {
-  const MyWardrobe({Key? key}) : super(key: key);
+  const MyWardrobe({super.key});
 
   @override
 @override
@@ -109,7 +109,7 @@ class _MyWardrobeState extends State<MyWardrobe>
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
                   items: ['Tops', 'Bottoms', 'Dresses', 'Shoes', 'Accessories']
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
@@ -126,7 +126,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedOccasion,
+                  initialValue: selectedOccasion,
                   items: [
                     'All',
                     'Weddings',
@@ -280,7 +280,7 @@ class _MyWardrobeState extends State<MyWardrobe>
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: ['Tops', 'Bottoms', 'Dresses', 'Shoes', 'Accessories'].contains(selectedCategory)
+                  initialValue: ['Tops', 'Bottoms', 'Dresses', 'Shoes', 'Accessories'].contains(selectedCategory)
                       ? selectedCategory
                       : null,
                   items: ['Tops', 'Bottoms', 'Dresses', 'Shoes', 'Accessories']
@@ -299,7 +299,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: ['All', 'Weddings', 'Casual', 'Work', 'Daily Wear', 'Parties'].contains(selectedOccasion)
+                  initialValue: ['All', 'Weddings', 'Casual', 'Work', 'Daily Wear', 'Parties'].contains(selectedOccasion)
                       ? selectedOccasion
                       : null,
                   items: [
@@ -495,7 +495,7 @@ class _MyWardrobeState extends State<MyWardrobe>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 6,
                 offset: const Offset(0, 3)),
           ],
@@ -554,7 +554,7 @@ class _MyWardrobeState extends State<MyWardrobe>
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              Colors.black.withOpacity(0.7),
+              Colors.black.withValues(alpha: 0.7),
               Colors.transparent,
             ],
           ),
@@ -599,7 +599,7 @@ class _MyWardrobeState extends State<MyWardrobe>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
+                  color: Colors.black.withValues(alpha: 0.07),
                   blurRadius: 10,
                   offset: const Offset(0, 3)),
             ],
@@ -727,7 +727,7 @@ class _MyWardrobeState extends State<MyWardrobe>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
@@ -750,7 +750,7 @@ class _MyWardrobeState extends State<MyWardrobe>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
@@ -907,7 +907,7 @@ class _MyWardrobeState extends State<MyWardrobe>
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: selectedWeather,
+                    initialValue: selectedWeather,
                     isExpanded: true,
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1016,8 +1016,8 @@ class _MyWardrobeState extends State<MyWardrobe>
       showSecurityAlert(ctx, detail);
 
   /// Warns when the photo looks like a different category than the one picked.
-  /// Returns the category to save, or null if the user dismisses the warning.
-  /// Never blocks: the user can always keep their own choice.
+  /// Returns the category to save, or null if the user cancels. A photo that
+  /// clearly belongs to another category cannot be saved under the chosen one.
   Future<String?> _confirmCategory({
     required String chosen,
     Uint8List? bytes,

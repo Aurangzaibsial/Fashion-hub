@@ -122,9 +122,8 @@ Future<CategoryCheck> checkCategory({
   return const CategoryCheck('unsure', null);
 }
 
-/// Warns that the photo looks like another category. Returns the category to
-/// save: [predicted] if the user accepts the suggestion, [chosen] if they keep
-/// their own choice, or null if they dismiss the dialog (cancel the save).
+/// Blocks saving a photo under the wrong category. Returns [predicted] if the
+/// user accepts the correct category, or null if they cancel (nothing is saved).
 Future<String?> showCategoryMismatchDialog(
   BuildContext context, {
   required String chosen,
@@ -142,19 +141,19 @@ Future<String?> showCategoryMismatchDialog(
         ],
       ),
       content: Text(
-        'This photo looks like it belongs in "$predicted", but you picked "$chosen". '
-        'Items in the wrong category can lead to wrong outfit suggestions.',
+        'Wrong category: this photo is a "$predicted" item, not "$chosen". '
+        'Please save it under "$predicted", or choose a different photo.',
         style: const TextStyle(fontSize: 14, height: 1.4),
       ),
       actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(ctx, chosen),
-          child: Text('Keep "$chosen"'),
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(ctx, predicted),
-          child: Text('Use "$predicted"'),
+          child: Text('Save as "$predicted"'),
         ),
       ],
     ),

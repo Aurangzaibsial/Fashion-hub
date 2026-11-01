@@ -192,9 +192,9 @@ def check_category(img: Image.Image, chosen: str) -> dict:
     predicted = max(cats, key=cats.get)
     conf = cats[predicted]
     chosen_p = cats.get(chosen, 0.0)
-    if predicted == chosen or chosen_p >= 0.30:
+    if predicted == chosen or chosen_p >= 0.35:
         status = "match"
-    elif conf >= 0.60 and chosen_p < 0.25:
+    elif conf >= 0.50 and chosen_p < 0.30:
         status = "mismatch"
     else:
         status = "unsure"
