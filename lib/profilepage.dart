@@ -17,7 +17,7 @@ import 'package:http/http.dart' as http;
 
 class ProfilePage extends StatefulWidget {
   final String? userId;
-  const ProfilePage({Key? key, this.userId}) : super(key: key);
+  const ProfilePage({super.key, this.userId});
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
@@ -339,7 +339,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileHeader(Map<String, dynamic> userData) {
+  Widget _buildProfileHeader(Map<String, dynamic> userData, {bool locked = false}) {
     final String name =
         (("${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}")
                     .trim()
@@ -456,6 +456,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
         const SizedBox(height: 20),
+        if (!locked)
         FutureBuilder<Map<String, int>>(
           future: _getUserStats(),
           builder: (context, snapshot) {
@@ -556,6 +557,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ],
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: const Icon(Icons.lock_outline),
+                  title: const Text("Private profile",
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: const Text("Only your followers can see your posts and stats",
+                      style: TextStyle(fontSize: 12)),
+                  value: userData['isPrivate'] == true,
+                  onChanged: (v) => _usersRef
+                      .doc(_currentUser!.uid)
+                      .update({'isPrivate': v}),
+                ),
               ],
             ),
           ),
@@ -577,7 +590,7 @@ class _ProfilePageState extends State<ProfilePage> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF121A33).withOpacity(0.25),
+                color: const Color(0xFF121A33).withValues(alpha: 0.25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -842,6 +855,29 @@ class _ProfilePageState extends State<ProfilePage> {
             return const Center(child: CircularProgressIndicator());
           }
           final userData = snapshot.data!.data() as Map<String, dynamic>;
+          final bool isOwner = effectiveUserId == _currentUser!.uid;
+          final bool isFollower = userData['followers'] is List &&
+              (userData['followers'] as List).contains(_currentUser!.uid);
+          final bool locked =
+              userData['isPrivate'] == true && !isOwner && !isFollower;
+          if (locked) {
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildProfileHeader(userData, locked: true),
+                  const SizedBox(height: 40),
+                  const Icon(Icons.lock_outline, size: 56, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text("This profile is private",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text("Only followers can see their posts and details.",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+                ],
+              ),
+            );
+          }
           return SingleChildScrollView(
             child: Column(
               children: [
@@ -879,7 +915,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
 class FullImagePage extends StatelessWidget {
   final String imageUrl;
-  const FullImagePage({Key? key, required this.imageUrl}) : super(key: key);
+  const FullImagePage({super.key, required this.imageUrl});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -892,8 +928,7 @@ class FullImagePage extends StatelessWidget {
 class UserListPage extends StatelessWidget {
   final String title;
   final List<String> userIds;
-  const UserListPage({Key? key, required this.title, required this.userIds})
-      : super(key: key);
+  const UserListPage({super.key, required this.title, required this.userIds});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
