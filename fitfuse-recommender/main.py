@@ -16,6 +16,7 @@ import io
 from urllib.parse import urlparse
 from image_validator import validate_wardrobe_image, log_security_alert_to_firestore, rejection_error
 import clip_helper
+import outfit_engine
 
 # --- Device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -389,12 +390,126 @@ def get_user_embeddings(user_id: str, force_refresh: bool = False):
     embeddings_cache[user_id] = parsed
     return parsed
 
+# --- Smart Outfit: "what in my wardrobe goes WITH this photo?" ---
+_color_cache = {}          # imageUrl -> (h, s, v) or None; bounded, see _item_color()
+_COLOR_CACHE_MAX = 2000
+
+
+def _fetch_color(url):
+    """Dominant color of a saved wardrobe photo (host allow-listed, size and time limited)."""
+    parsed = urlparse(url or "")
+    if parsed.scheme != "https" or parsed.hostname not in ALLOWED_IMAGE_HOSTS:
+        return None
+    try:
+        resp = requests.get(url, timeout=8)
+        if resp.status_code != 200 or len(resp.content) > 8_000_000:
+            return None
+        return outfit_engine.dominant_hsv(resp.content)
+    except requests.RequestException:
+        return None
+
+
+def _item_colors(urls):
+    """Colors for many photos at once; only downloads photos not seen before."""
+    missing = [u for u in set(urls) if u not in _color_cache]
+    if missing:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for u, c in zip(missing, pool.map(_fetch_color, missing)):
+                if len(_color_cache) >= _COLOR_CACHE_MAX:
+                    _color_cache.pop(next(iter(_color_cache)))
+                _color_cache[u] = c
+    return {u: _color_cache.get(u) for u in urls}
+
+
+def _detect_category(data: bytes, forced):
+    """Category of the uploaded photo: the caller's choice if valid, else CLIP's best guess."""
+    if forced:
+        for c in outfit_engine.CATEGORIES:
+            if c.lower() == forced.strip().lower():
+                return c
+    res = clip_helper.analyze(Image.open(io.BytesIO(data)).convert("RGB"))
+    if not res:
+        return None
+    cats = res["categories"]
+    best = max(cats, key=cats.get)
+    return best if cats[best] >= 0.40 else None   # not sure -> suggest every slot
+
+
+def _build_outfit(user_id: str, data: bytes, category, weather, occasion, mode="similar"):
+    """
+    mode "similar":  the photo is an outfit; suggest the most similar wardrobe item for Tops,
+                     Bottoms and Shoes (look-alikes of what is in the photo).
+    mode "complete": the photo is one item; suggest what goes WITH it (other slots only).
+    """
+    complete = mode == "complete"
+    upload_cat = _detect_category(data, category) if (complete or category) else None
+    upload_hsv = outfit_engine.dominant_hsv(data)
+    requested_occ = outfit_engine.occasion_from_label(occasion) or outfit_engine.occasion_from_label(weather)
+    # "Casual" in the weather dropdown is an occasion, not a weather; "none/all/auto" mean no weather.
+    is_weather = weather and not outfit_engine.occasion_from_label(weather)         and weather.strip().lower() not in ("none", "all", "auto")
+    weather_label = weather if is_weather else None
+
+    # The wardrobe itself is the source of truth (current category, occasion and existence),
+    # so deleted or re-categorised items can never be suggested from stale data.
+    wardrobe = []
+    for d in db.collection("users").document(user_id).collection("wardrobe").stream():
+        x = d.to_dict() or {}
+        if x.get("imageUrl"):
+            wardrobe.append({"name": x.get("name") or "Untitled", "imageUrl": x["imageUrl"],
+                             "category": x.get("category") or "Other", "occasion": x.get("occasion") or "All"})
+
+    slots = outfit_engine.slots_for(upload_cat) if complete else outfit_engine.DEFAULT_SLOTS
+    candidates = [w for w in wardrobe if w["category"] in slots]
+
+    visual = {e.get("imageUrl"): np.array(e["visual_embedding"]).reshape(1, -1)
+              for e in get_user_embeddings(user_id) if e.get("visual_embedding")}
+    q = compute_visual_embedding(data).numpy().reshape(1, -1)
+    sims = {u: float(cosine_similarity(q, v)[0][0]) for u, v in visual.items()}
+
+    # Never suggest the very photo that was uploaded (or a near-duplicate of it).
+    candidates = [c for c in candidates if sims.get(c["imageUrl"], 0.0) < 0.97]
+
+    colors = _item_colors([c["imageUrl"] for c in candidates])
+    rec = {}
+    for slot in slots:
+        bucket = [c for c in candidates if c["category"] == slot]
+        if not bucket:
+            rec[slot] = {"title": f"No {slot.lower()} items", "imageUrl": ""}
+            continue
+        norm = outfit_engine.minmax([sims.get(c["imageUrl"], 0.0) for c in bucket])
+        ranked = []
+        for c, sn in zip(bucket, norm):
+            hsv = colors.get(c["imageUrl"])
+            if complete:
+                score = outfit_engine.score_item(upload_hsv, hsv, weather_label, requested_occ, c["name"], c["occasion"])
+                why = outfit_engine.reason_for(upload_hsv, hsv, weather_label, requested_occ, c["name"], c["occasion"])
+            else:
+                score = outfit_engine.score_similar(sn, upload_hsv, hsv, weather_label, requested_occ, c["name"], c["occasion"])
+                why = outfit_engine.reason_similar(sn, upload_hsv, hsv)
+            ranked.append((score, c, why))
+        ranked.sort(key=lambda t: (-t[0], t[1]["name"].lower()))
+        score, best, why = ranked[0]
+        rec[slot] = {
+            "title": best["name"],
+            "imageUrl": best["imageUrl"],
+            "score": round(score * 100),
+            "reason": why,
+            "alternatives": [{"title": c["name"], "imageUrl": c["imageUrl"], "score": round(s * 100)}
+                             for s, c, _ in ranked[1:3]],
+        }
+    return {"weather": weather or "General", "mode": "complete" if complete else "similar",
+            "detected_category": upload_cat, "recommended_outfit": rec}
+
+
 @app.post("/recommend-outfit")
 async def recommend_outfit(
     file:     UploadFile = File(...),
     userId:   str        = Query(...),
-    category: str        = Query(default=None),
+    category: str        = Query(default=None),   # optional: what the uploaded photo is
     weather:  str        = Query(default=None),
+    occasion: str        = Query(default=None),
+    mode:     str        = Query(default="similar"),   # "similar" (default) or "complete"
 ):
     if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
         raise HTTPException(415, "Only images allowed")
@@ -421,53 +536,10 @@ async def recommend_outfit(
             }
         )
 
-
-    # If weather is provided, compute multimodal combined query (Visual + Text Weather)
-    if weather and weather.strip() and weather.lower() not in ["none", "all", "auto"]:
-        weather_prompt = f"{weather.strip()} weather clothing outfit style"
-        qvec = compute_combined_embedding(data, title=weather_prompt).numpy().reshape(1, -1)
-        use_combined = True
-    else:
-        qvec = compute_visual_embedding(data).numpy().reshape(1, -1)
-        use_combined = False
-
-    from collections import defaultdict
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    # Fast in-memory cache retrieval (0.01s instead of 3-5s Firestore fetch)
-    all_embs = get_user_embeddings(userId)
-    groups = defaultdict(list)
-    for d in all_embs:
-        if category and category.lower() == d.get("category", "").lower():
-            continue
-        groups[d.get("category", "Other")].append(d)
-
-    rec = {}
-    for cat in ["Tops", "Bottoms", "Shoes"]:
-        bucket = groups.get(cat, [])
-        if not bucket:
-            rec[cat] = {"title": f"No {cat.lower()} items", "imageUrl": ""}
-            continue
-
-        def get_score(it):
-            if use_combined and "combined_embedding" in it and len(it["combined_embedding"]) == qvec.shape[1]:
-                target_vec = np.array(it["combined_embedding"]).reshape(1, -1)
-            elif "visual_embedding" in it:
-                # If query is combined (1280) but item only has visual (512), use visual slice
-                q_slice = qvec[:, :512] if qvec.shape[1] > 512 else qvec
-                target_vec = np.array(it["visual_embedding"]).reshape(1, -1)
-                return cosine_similarity(q_slice, target_vec)[0][0]
-            else:
-                return -1.0
-            return cosine_similarity(qvec, target_vec)[0][0]
-
-        best = max(bucket, key=get_score)
-        rec[cat] = {"title": best.get("title", "Untitled"), "imageUrl": best.get("imageUrl", "")}
-
-    return {
-        "weather": weather or "General",
-        "recommended_outfit": rec
-    }
+    # Model and network work is blocking: keep it off the event loop so other requests stay responsive.
+    from starlette.concurrency import run_in_threadpool
+    return await run_in_threadpool(_build_outfit, userId, data, category, weather, occasion,
+                                 "complete" if mode == "complete" else "similar")
 
 @app.post("/compare-dresses")
 async def compare_dresses(

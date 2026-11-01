@@ -859,6 +859,8 @@ class _MyWardrobeState extends State<MyWardrobe>
     bool loading = false;
     Map<String, dynamic>? outfit;
     String selectedWeather = 'Sunny';
+    String suggestMode = 'Similar outfit'; // or 'Complete my look'
+    String? detectedType;
     bool fetchedWeather = false;
 
     showDialog(
@@ -923,6 +925,26 @@ class _MyWardrobeState extends State<MyWardrobe>
                       }
                     },
                   ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "What do you want?",
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: suggestMode,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: ['Similar outfit', 'Complete my look']
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) setStateDialog(() => suggestMode = val);
+                    },
+                  ),
                   const SizedBox(height: 16),
                   Center(
                     child: ElevatedButton.icon(
@@ -941,14 +963,17 @@ class _MyWardrobeState extends State<MyWardrobe>
                           setStateDialog(() {
                             loading = true;
                             outfit = null;
+                            detectedType = null;
                           });
                           final result = await _getSmartRecommendations(
                             picked,
                             selectedWeather,
+                            complete: suggestMode == 'Complete my look',
                           );
                           if (!context.mounted) return;
                           setStateDialog(() {
                             loading = false;
+                            detectedType = result?['detected_category'] as String?;
                             outfit = result != null && result['status'] == 'success'
                                 ? result['recommended_outfit'] as Map<String, dynamic>
                                 : null;
@@ -968,6 +993,12 @@ class _MyWardrobeState extends State<MyWardrobe>
                   if (loading) const Center(child: CircularProgressIndicator()),
                   if (outfit != null) ...[
                     const Divider(),
+                    if (detectedType != null && suggestMode == 'Complete my look')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text("Your photo looks like: $detectedType",
+                            style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      ),
                     ...outfit!.entries.map((entry) {
                       final cat = entry.key;
                       final item = entry.value;
@@ -992,7 +1023,8 @@ class _MyWardrobeState extends State<MyWardrobe>
                               ),
                               title: Text(item['title'] ?? 'Untitled',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              subtitle: Text("$cat • $selectedWeather",
+                              subtitle: Text(
+                                  "$cat • ${item['reason'] ?? selectedWeather}",
                                   style: const TextStyle(fontSize: 12, color: Colors.black54)),
                             );
                     }),
@@ -1041,10 +1073,11 @@ class _MyWardrobeState extends State<MyWardrobe>
   }
 
   Future<Map<String, dynamic>?> _getSmartRecommendations(
-      XFile pickedFile, String weather) async {
+      XFile pickedFile, String weather, {bool complete = false}) async {
     try {
       final uri = Uri.parse(
-          "$kRecommenderUrl/recommend-outfit?userId=$_userId&weather=${Uri.encodeComponent(weather)}");
+          "$kRecommenderUrl/recommend-outfit?userId=$_userId&weather=${Uri.encodeComponent(weather)}"
+          "${complete ? '&mode=complete' : ''}");
       final request = http.MultipartRequest('POST', uri);
 
       if (kIsWeb) {
@@ -1070,6 +1103,7 @@ class _MyWardrobeState extends State<MyWardrobe>
       if (response.statusCode == 200) {
         return {
           'status': 'success',
+          'detected_category': data['detected_category'],
           'recommended_outfit': data['recommended_outfit'] as Map<String, dynamic>,
         };
       } else if (response.statusCode == 400 && data['detail'] != null) {
